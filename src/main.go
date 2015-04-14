@@ -3,13 +3,13 @@ package main
 import(
 	
 	//. "./udp"
-	//."./Driver"
+	."./Driver"
 	. "./Elevator"
 	//. "./orderRegister"
 	//"timer"
-	//."fmt"
+	//"fmt"
 	//"net"
-	//"time"
+	."time"
 	//"strings"
 	//"strconv"
 )
@@ -18,7 +18,7 @@ const localPort = 20016
 const broadcastPort = 20017
 const message_size = 1024
 
-var exit chan bool
+
 
 func main(){	
 	
@@ -45,15 +45,29 @@ func main(){
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()
 	go CheckButtonCommand()
+	go RunElevator()
 	go UpdateFloor()
+
 	
-	<- exit
 	//go ReceiveOrder()
-	//go RunElevator()
-	
 	//go checklastfloor()????
 	//go checktimer()????
 	
-	//Elev_set_motor_direction(0)
+	var s chan int
+	go Stop(s)
+	
+	select {
+	case <- s :
+		Elev_set_motor_direction(0)
+		break
+	default:
+		Sleep(200*Millisecond)
+	}
 }
+
+
+
+
+
+
 

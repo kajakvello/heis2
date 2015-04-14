@@ -7,8 +7,8 @@ import "C"
 
 
 
-func io_init() bool {
-	return int(C.io_init()) != 0
+func io_init() int {
+	return int(C.io_init())
 }
 
 

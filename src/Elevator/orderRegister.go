@@ -40,23 +40,30 @@ func UpdateMyOrders(receivedOrder Order) {
 		up[receivedOrder.Floor] = false
 		down[receivedOrder.Floor] = false
 		
-		SendOrder(receivedOrder)
-		Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
-		Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
+		//SendOrder(receivedOrder)
 		Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
+		if (receivedOrder.Floor < N_FLOORS-1) {
+			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
+		}
+		if (receivedOrder.Floor > 0) {
+			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
+		}
+
 		
 	} else {
 	
 		if receivedOrder.Direction == 0 {
+			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
 			down[receivedOrder.Floor] = true
 		} else if receivedOrder.Direction == 1 {
 			up[receivedOrder.Floor] = true
+			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 1)
 		} else if receivedOrder.Direction == -1 {
 			inside[receivedOrder.Floor] = true
+			Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 1)
 		} else {
 			println("Unvalid direction, or unvalid floor")
-		}
-		
+		}	
 	}
 }
 
@@ -71,15 +78,21 @@ func UpdateGlobalOrders(receivedOrder Order) {
 		globalOrders[receivedOrder.Floor] = false
 		globalOrders[N_FLOORS-2 + receivedOrder.Floor] = false
 		
-		Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
-		Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
+		if (receivedOrder.Floor < N_FLOORS-1) {
+			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
+		}
+		if (receivedOrder.Floor > 0) {
+			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
+		}
 		
 	} else {
 	
 		if receivedOrder.Direction == 1 {
 			globalOrders[receivedOrder.Floor] = true
+			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 1)
 		} else if receivedOrder.Direction == 0 {
 			globalOrders[N_FLOORS-2 + receivedOrder.Floor] = true
+			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
 		} else {
 			println("Not valid direction, or unvalid floor")
 		}
@@ -91,7 +104,7 @@ func UpdateGlobalOrders(receivedOrder Order) {
 
 
 
-
+//Funker fra init
 func DeleteAllOrders() {
 	for j:=0; j<N_FLOORS*2-2; j++ {
 		globalOrders[j] = false
@@ -120,10 +133,10 @@ func GetOrder(direction int, floor int) bool {
 	if (inside[floor] == true) {
 		return true
 	}
-	if ( up[floor] == true && (direction == 0 || direction == -1 || floor == 0 || !checkOrdersUnderFloor(floor)) ) {
+	if ( up[floor] == true && (direction == 0 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) ) {
 		return true
 	}
-	if ( down[floor] == true && (direction == 1 || direction == -1 || floor == 3 || !checkOrdersAboveFloor(floor)) ) {
+	if ( down[floor] == true && (direction == 1 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) ) {
 		return true
 	}
 	return false
@@ -132,7 +145,7 @@ func GetOrder(direction int, floor int) bool {
 
 
 
-func checkOrdersUnderFloor(floor int) bool {
+func CheckOrdersUnderFloor(floor int) bool {
 	for i:=0; i<floor; i++ {
 		if (up[i] || down[i] || inside[i]) {
 			return true
@@ -144,7 +157,7 @@ func checkOrdersUnderFloor(floor int) bool {
 
 
 
-func checkOrdersAboveFloor(floor int) bool {
+func CheckOrdersAboveFloor(floor int) bool {
 	for i:=floor+1; i<N_FLOORS; i++ {
 		if (up[i] || down[i] || inside[i]) {
 			return true

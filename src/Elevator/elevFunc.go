@@ -6,6 +6,7 @@ import (
 	."time"
 	."./../Udp"
 	"encoding/json"
+	//"fmt"
 )
 
 
@@ -22,12 +23,13 @@ var exit chan bool
 //Elevfunc skal ha initfunksjon, alle elevfunksjoner og de fleste variabler, troooor jeg
 
 func Init(localPort, broadcastPort, message_size int) {
-
+	/*
 	err := Udp_init(localPort, broadcastPort, message_size, Send_ch, receive_ch)
 	if err != nil {
 		println("Error during udp-init")
 		return
-	}
+	} */
+	
 	Elev_init()		//Fra driver.go
 	DeleteAllOrders()
 	for Elev_get_floor_sensor_signal() != 0 {
@@ -37,48 +39,44 @@ func Init(localPort, broadcastPort, message_size int) {
 	Sleep(2000*Microsecond)
 	Elev_set_motor_direction(0)
 	Elev_set_floor_indicator(0)	
-	direction = -1
+	direction = 1
 	last_floor = -1
+	floor = 0
+	println("ferdig init")
 }
 
 
 
 
-func FloorReached(floor int) {
+func floorReached(floor int) {
 	last_floor = floor
 	Elev_set_floor_indicator(floor)		//set light on floor
 	
 	if (GetOrder(direction, floor)) {
 		if direction == 1 {
-			Elev_set_motor_direction(100)
-		} else if (direction == 0) {
 			Elev_set_motor_direction(-100)
+		} else if (direction == 0) {
+			Elev_set_motor_direction(100)
 		}
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
-		Elev_set_door_open_lamp(1)
-		go openDoor()
+		if doorOpen {
+			exit <- true
+		}
+		go openDoorAndDeleteOrder()
 		
 	} else if (floor == 0) {			//Stops, so the elevator do not pass 1. floor
 		Elev_set_motor_direction(100)
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
-		direction = 0
-		RunElevator()
+		direction = 1
 		
 	} else if (floor == 3) {			//Stops, so the elevator do not pass 4. floor
 		Elev_set_motor_direction(-100)
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
-		direction = 1
-		RunElevator()
+		direction = 0
 	}
-	
-}
-
-
-
-func orderHandled() {
 	
 }
 
@@ -86,21 +84,20 @@ func orderHandled() {
 
 func RunElevator() {
 
-
-	
-	if doorOpen {
-		return
-	}
-	
-	if (EmptyQueue()) {
-		direction = -1
+	for {
+		if doorOpen {
+			Sleep(100*Millisecond)
+		} else {
 		
-	} else {
-	
-		if (direction == 0) {
-			Elev_set_motor_direction(300)
-		} else if (direction == 1) {
-			Elev_set_motor_direction(-300)
+			setDirection()
+
+			if direction == 0 {
+				Elev_set_motor_direction(-300)
+			} else if direction == 1 {
+				Elev_set_motor_direction(300)
+			}
+
+			Sleep(100*Millisecond)
 		}
 	}
 }
@@ -121,27 +118,28 @@ func getCost(orderFloor int, direction int) int {
 
 //Registers if any up-buttons is pushed
 func CheckButtonCallUp() {
-
 	for{
 		for i:=0; i<N_FLOORS-1; i++ {
-			if (Elev_get_button_signal(BUTTON_CALL_UP, i) == 1) {
-			
+			if (Elev_get_button_signal(BUTTON_CALL_UP, i)) {
+				println("er i første if")
 				if (direction == -1 && floor == i) {
 					if doorOpen {
 						exit <- true
 					}
-					go openDoor()
+					go openDoorAndDeleteOrder()
 				
 				} else {
 					//Regn ut egen cost og send newOrder
-					getCost(i, 1)
+					//getCost(i, 1)
 					newOrder := Order{floor, direction, i, 1, false}
+					println(i)
 					UpdateGlobalOrders(newOrder)
-					go SendOrder(newOrder)
+					//go SendOrder(newOrder)
 					//Set en timer som hører etter svar, ta bestillingen selv om ingen svar etter timer går ut.
 				}
 			}
 		}
+		Sleep(100*Millisecond)
 	}
 }
 
@@ -152,18 +150,18 @@ func CheckButtonCallUp() {
 func CheckButtonCallDown() {
 
 	for{
-		for i:=1; i<=N_FLOORS; i++ {
-			if (Elev_get_button_signal(BUTTON_CALL_DOWN, i) == 1) {
+		for i:=1; i< N_FLOORS; i++ {
+			if (Elev_get_button_signal(BUTTON_CALL_DOWN, i)) {
 			
 				if (direction == -1 && floor == i) {
 					if doorOpen {
 						exit <- true
 					}
-					go openDoor()
+					go openDoorAndDeleteOrder()
 
 				} else {
 					//Regn ut egen cost og send newOrder
-					getCost(i, 0)
+					//getCost(i, 0)
 					newOrder := Order{floor, direction, i, 0, false}
 					UpdateGlobalOrders(newOrder)
 					go SendOrder(newOrder)
@@ -171,6 +169,7 @@ func CheckButtonCallDown() {
 				}
 			}
 		}
+		Sleep(100*Millisecond)
 	}
 }
 
@@ -179,13 +178,13 @@ func CheckButtonCallDown() {
 func CheckButtonCommand() {
 
 	for{
-		for i:=0; i<4; i++ {
-			if (Elev_get_button_signal(BUTTON_COMMAND, i) == 1) {
+		for i:=0; i<N_FLOORS; i++ {
+			if (Elev_get_button_signal(BUTTON_COMMAND, i)) {
 				if (direction == -1 && floor == i) {
 					if doorOpen {
 						exit <- true
 					}
-					go openDoor()
+					go openDoorAndDeleteOrder()
 
 				} else {
 					newOrder := Order{floor, direction, i, -1, false}
@@ -193,39 +192,73 @@ func CheckButtonCommand() {
 				}
 			}
 		}
+		Sleep(100*Millisecond)
 	}
 }
-
 
 
 func UpdateFloor() {
 	for{
 		floor = Elev_get_floor_sensor_signal()
+		
+		if last_floor != floor {	
+		    if (floor != -1) {
+		        floorReached(floor)
+		    } else {
+		    	Elev_set_door_open_lamp(0)
+		    }
+		    last_floor = floor
+		}
+		Sleep(100*Millisecond)
 	}
 }
 
 
-
-func openDoor() {
+func openDoorAndDeleteOrder() {
 	
 	select {
-	case _, ok := <- exit:
+	case ok := <- exit:
     	if ok {
+    		println("kill thread")
     		return
     	}
 	default:
-	
 		doorOpen = true
 		Elev_set_door_open_lamp(1)
 		Sleep(3*Second)
+		
+		
+		if Elev_get_floor_sensor_signal() == last_floor {
+			deleteOrder := Order{floor, direction, floor, -1, true}
+			UpdateMyOrders(deleteOrder)
+			UpdateGlobalOrders(deleteOrder)
+		}
+		
 		Elev_set_door_open_lamp(0)
 		doorOpen = false
-		RunElevator()
 	}
 }
 
 
+func setDirection(){
 
+	if (EmptyQueue()) {
+		direction = -1
+	} else {
+
+		if (direction == 0) && !(CheckOrdersUnderFloor(last_floor)) {
+			direction = 1
+		} else if (direction == 1) && !(CheckOrdersAboveFloor(last_floor)) {
+			direction = 0
+		} else if direction == -1 {
+			if CheckOrdersAboveFloor(last_floor) {
+				direction = 1
+			} else if CheckOrdersUnderFloor(last_floor) {
+				direction = 0
+			}
+		}
+	}
+}
 
 
 
@@ -245,6 +278,17 @@ func ReceiveOrder() Order {
 	return receivedOrder
 }
 
+
+
+
+
+func Stop(ch chan int) int {
+	for {
+		if Elev_get_stop_signal() != 0 {
+			ch <- 1
+		}
+	}
+}
 
 
 
