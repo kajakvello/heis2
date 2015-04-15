@@ -9,7 +9,7 @@ import(
 	//"timer"
 	//"fmt"
 	//"net"
-	."time"
+	//."time"
 	//"strings"
 	//"strconv"
 )
@@ -47,22 +47,22 @@ func main(){
 	go CheckButtonCommand()
 	go RunElevator()
 	go UpdateFloor()
+	go DoorControl
 
 	
 	//go ReceiveOrder()
 	//go checklastfloor()????
 	//go checktimer()????
 	
-	var s chan int
+
+	s := make(chan int)
 	go Stop(s)
 	
 	select {
-	case <- s :
+	case <- s:
 		Elev_set_motor_direction(0)
 		break
-	default:
-		Sleep(200*Millisecond)
-	}
+	} 
 }
 
 

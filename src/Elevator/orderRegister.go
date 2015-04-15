@@ -9,6 +9,20 @@ import (
 
 
 
+//ElevatorPositions:
+//Sets from senders adress where the other elevators are located
+ElevOneAdress string	//brukes for å gi senderene rett variable. Brukes for å sjekke hvilken heis som skal forandres floor og direction på.
+ElevOneFloor int
+ElevOneDirection int
+ElevTwoAdress string
+ElevTwoFloor int
+ElevTwoDirection int
+
+
+
+
+
+
 
 //0 = 1.etg opp, 1 = 2.etg opp, 2 = 3.etg opp, 3 = 2.etg ned, 4 = 3.etg ned, 5 = 4.etg ned
 var globalOrders [N_FLOORS*2-2]bool
@@ -65,6 +79,8 @@ func UpdateMyOrders(receivedOrder Order) {
 			println("Unvalid direction, or unvalid floor")
 		}	
 	}
+	
+
 }
 
 
@@ -133,10 +149,10 @@ func GetOrder(direction int, floor int) bool {
 	if (inside[floor] == true) {
 		return true
 	}
-	if ( up[floor] == true && (direction == 0 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) ) {
+	if ( up[floor] == true && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) ) {
 		return true
 	}
-	if ( down[floor] == true && (direction == 1 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) ) {
+	if ( down[floor] == true && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) ) {
 		return true
 	}
 	return false

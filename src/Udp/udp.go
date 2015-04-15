@@ -21,6 +21,9 @@ type Order struct {
 }
 
 
+
+
+
 var laddr *net.UDPAddr //Local address
 var baddr *net.UDPAddr //Broadcast address
 
