@@ -57,7 +57,7 @@ func main(){
 	go Stop(s)
 	
 	select {
-	case _ := <- s :
+	case <- s :
 		Elev_set_motor_direction(0)
 		break
 	default:
