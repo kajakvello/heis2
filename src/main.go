@@ -1,10 +1,7 @@
 package main
 
 import(
-	
-	//. "./udp"
-	."./Driver"
-	. "./Elevator"
+
 	//. "./orderRegister"
 	//"timer"
 	//"fmt"
@@ -17,6 +14,13 @@ import(
 const localPort = 20016
 const broadcastPort = 20017
 const message_size = 1024
+
+
+//TODO: 
+// - Lage kostfunksjon
+// - Skal elevators ta i mot seg selv og ha i map?
+
+
 
 
 

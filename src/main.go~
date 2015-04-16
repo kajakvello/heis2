@@ -47,7 +47,7 @@ func main(){
 	go CheckButtonCommand()
 	go RunElevator()
 	go UpdateFloor()
-	go DoorControl
+	go DoorControl()
 
 	
 	//go ReceiveOrder()

@@ -6,8 +6,9 @@ import (
 	."time"
 	."./../Udp"
 	"encoding/json"
-	//"fmt"
+	"fmt"
 	"net"
+	."strings"
 )
 
 type ElevStatus struct{
@@ -50,7 +51,18 @@ func Init(localPort, broadcastPort, message_size int) {
 	myDirection = -1
 	lastFloor = 0
 	myFloor = 0
-	myAddress = "finne egen adresse"
+	
+	//Henter egen ip-adresse = 147
+	addrs, _ := net.InterfaceAddrs()
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ip := ipnet.IP.String()
+				splitip := Split(ip, ".")
+				myAddress := splitip[3]
+			}
+		}
+	}
 	println("ferdig init")
 }
 
@@ -281,24 +293,31 @@ func setDirection(){
 
 //Calculates cost, returns 1 if myElev got the lowest cost
 func getCost(orderFloor int, orderDirection int) int {
-	/*
-	myCost := 1 //regner ut egen cost
-	elevOneCost := 1 //reger ut elev1 sin cost ut fra ElevOneFloor og ElevOneDirection
-	elevTwoCost := 1 //reger ut elev2 sin cost ut fra ElevTwoFloor og ElevTwoDirection
 	
-	if (myCost < elevOneCost) && (myCost < elevTwoCost) {
+	myCost := 1 //regner ut egen cost
+	lowestCost := myCost
+	equalCost := 0
+	elevKey := ""
+	
+	for key, val := range elevators {
+		elevCost := 1 			//costfunksjon ut fra val.LastFloor og val.Direction
+		if elevCost < lowestCost {
+			lowestCost = elevCost
+		} else if elevCost == myCost {
+			equalCost = elevCost
+			elevKey = key
+		}
+	}
+
+	
+	if (myCost == lowestCost) && (equalCost == 0) {
 		return 1
-	} else if (myCost == elevOneCost) {
-		if myAddress < ElevOneAdress {		//myAddress må lages!!!
+	} else if (myCost == equalCost) && (myCost == lowestCost) {
+		if myAddress < elevators[elevKey] {		//myAddress må lages!!!
 			return 1
 		}
 		return 0
-	} else if (myCost == elevOneCost) {
-		if myAddress < ElevOneAdress {
-			return 1
-		}
-		return 0
-	} */
+	} 
 	return 0
 }
 
@@ -306,16 +325,23 @@ func getCost(orderFloor int, orderDirection int) int {
 
 //Receives messages from other elevators continuous
 func ReceiveMessage() {
-
+	
 	for{
 		var receivedMessage Udp_message
 		receivedMessage = <- receive_ch
+		
+		IP := getIP(receivedMessage.Raddr)
+		
+		if IP == MyAddress {
+			break
+		}
 		
 		var receivedOrder Order
 		err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
 		if (err != nil) {
 			println("Receive Order Error: ", err)
 		}
+
 		
 		if receivedOrder.newOrder {
 			ReceiveOrder(receivedOrder)
@@ -324,21 +350,32 @@ func ReceiveMessage() {
 		
 		newElevator := true	
 		for key,_ := range elevators {
-			if key == receivedMessage.Raddr{
+			if key == IP {
 				newElevator = false
 			}
 		}
 		
 		if newElevator {
-			go setMessageTimer(receivedMessage.Raddr)
+			go setMessageTimer(IP)
 		} else {
-			gotMessage <- receivedMessage.Raddr
+			gotMessage <- IP
 		}
 		
-		elevators[receivedMessage.Raddr] = ElevStatus{LastFloor: receivedMessage.MyFloor, Direction: receivedMessage.MyDirection} 	
+		elevators[IP] = ElevStatus{LastFloor: receivedMessage.MyFloor, Direction: receivedMessage.MyDirection} 	
 		
 	}
 }
+
+
+
+
+func getIP(address string) string {
+	splitaddr := Split(address, ".")
+	splitip := Split(splitaddr[3], ":")
+	myAddress := splitip[0]
+	return myAddress
+}
+
 
 
 
