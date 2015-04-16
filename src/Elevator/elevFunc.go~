@@ -7,13 +7,21 @@ import (
 	."./../Udp"
 	"encoding/json"
 	//"fmt"
+	"net"
 )
+
+type ElevStatus struct{
+	LastFloor int
+	Direction int
+}
 
 
 var myFloor = -1
 var lastFloor = 0
 var myDirection = -1	// -1 = står i ro, 1 = opp, 0 = ned
 var doorOpen = false
+var myAddress string
+var elevators = make(map[string]ElevStatus)
 
 
 var receive_ch chan Udp_message
@@ -23,12 +31,12 @@ var openDoor = make(chan bool)
 //Elevfunc skal ha initfunksjon, alle elevfunksjoner og de fleste variabler, troooor jeg
 
 func Init(localPort, broadcastPort, message_size int) {
-	/*
+	
 	err := Udp_init(localPort, broadcastPort, message_size, Send_ch, receive_ch)
 	if err != nil {
 		println("Error during udp-init")
 		return
-	} */
+	}
 	
 	Elev_init()		//Fra driver.go
 	DeleteAllOrders()
@@ -42,6 +50,7 @@ func Init(localPort, broadcastPort, message_size int) {
 	myDirection = -1
 	lastFloor = 0
 	myFloor = 0
+	myAddress = "finne egen adresse"
 	println("ferdig init")
 }
 
@@ -137,15 +146,16 @@ func CheckButtonCallUp() {
 				} else {
 					//Regn ut egen cost og send newOrder
 					//getCost(i, 1)
-					newOrder := Order{myFloor, myDirection, i, 1, false}
+					newOrder := Order{myFloor, myDirection, i, 1, false, true}
 					if EmptyQueue() {
 						UpdateMyOrders(newOrder)
 						setDirection()
+					} else {
+						UpdateGlobalOrders(newOrder)
 					}
-					UpdateGlobalOrders(newOrder)
 					UpdateMyOrders(newOrder)		//for testing
 					//go SendOrder(newOrder)
-					//Set en timer som hører etter svar, ta bestillingen selv om ingen svar etter timer går ut.
+					
 				}
 			}
 		}
@@ -169,15 +179,16 @@ func CheckButtonCallDown() {
 				} else {
 					//Regn ut egen cost og send newOrder
 					//getCost(i, 0)
-					newOrder := Order{myFloor, myDirection, i, 0, false}
+					newOrder := Order{myFloor, myDirection, i, 0, false, true}
 					if EmptyQueue() {
 						UpdateMyOrders(newOrder)
 						setDirection()
+					} else {
+						UpdateMyOrders(newOrder)
 					}
-					UpdateMyOrders(newOrder)
 					UpdateGlobalOrders(newOrder)
 					//go SendOrder(newOrder)
-					//Set en timer som hører etter svar, ta bestillingen selv om ingen svar etter timer går ut.
+					
 				}
 			}
 		}
@@ -198,12 +209,13 @@ func CheckButtonCommand() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, -1, false}
+					newOrder := Order{myFloor, myDirection, i, -1, false, true}
 					if EmptyQueue() {
 						UpdateMyOrders(newOrder)
 						setDirection()
+					} else {
+						UpdateMyOrders(newOrder)
 					}
-					UpdateMyOrders(newOrder)
 				}
 			}
 		}
@@ -225,7 +237,7 @@ func DoorControl() {
 				Elev_set_door_open_lamp(1)
 				timer.Reset(Second*3)
 				if Elev_get_floor_sensor_signal() == lastFloor {
-					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true}
+					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false}
 					UpdateMyOrders(deleteOrder)
 					UpdateGlobalOrders(deleteOrder)
 				}
@@ -267,19 +279,85 @@ func setDirection(){
 
 
 
-
 //Calculates cost, returns 1 if myElev got the lowest cost
 func getCost(orderFloor int, orderDirection int) int {
-
+	/*
 	myCost := 1 //regner ut egen cost
-	elevOneCost := 1 //reger ut elev1 sin cost ut fra ElevatorPositions.ElevOneFloor og ElevatorPositions.ElevOneDirection
-	elevTwoCost := 1 //reger ut elev2 sin cost ut fra ElevatorPositions.ElevTwoFloor og ElevatorPositions.ElevTwoDirection
+	elevOneCost := 1 //reger ut elev1 sin cost ut fra ElevOneFloor og ElevOneDirection
+	elevTwoCost := 1 //reger ut elev2 sin cost ut fra ElevTwoFloor og ElevTwoDirection
+	
 	if (myCost < elevOneCost) && (myCost < elevTwoCost) {
 		return 1
-	} 
+	} else if (myCost == elevOneCost) {
+		if myAddress < ElevOneAdress {		//myAddress må lages!!!
+			return 1
+		}
+		return 0
+	} else if (myCost == elevOneCost) {
+		if myAddress < ElevOneAdress {
+			return 1
+		}
+		return 0
+	} */
 	return 0
 }
 
+
+
+
+func ReceiveMessage() {
+
+	for{
+		var receivedMessage Udp_message
+		receivedMessage = <- receive_ch
+		
+		var receivedOrder Order
+		err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
+		if (err != nil) {
+			println("Receive Order Error: ", err)
+		}
+		
+		if receivedOrder.newOrder {
+			ReceiveOrder(receivedOrder)
+		}
+		
+		
+		newElevator := true	
+		for key,_ := range elevators {
+			if key == receivedMessage.Raddr{
+				newElevator = false
+			}
+		}
+		
+		if newElevator {
+			go setMessageTimer(receivedMessage.Raddr)
+		} else {
+			gotMessage <- receivedMessage.Raddr
+		}
+		
+		elevators[receivedMessage.Raddr] = ElevStatus{LastFloor: receivedMessage.MyFloor, Direction: receivedMessage.MyDirection} 	
+		
+	}
+}
+
+
+
+
+func setMessageTimer(address string) {
+	
+	timer := NewTimer(3*Hour)
+	for {
+		select {
+		case <- timer.C:
+			delete (elevators, address)
+			return
+		case receivedAddress := <- gotMessage:
+			if receivedAddress == address {
+				timer.Reset(3*Second)
+			}
+		}
+	}
+}
 
 
 
@@ -288,41 +366,17 @@ func getCost(orderFloor int, orderDirection int) int {
 
 
 //Receives orders from other elevators
-func ReceiveOrder() {
+func ReceiveOrder(receivedOrder Order) {
+	
+	cost := getCost(receivedOrder.Floor, receivedOrder.Direction)
+	
+	if cost == 1 {
+		UpdateMyOrders(receivedOrder)
+	}
+	UpdateGlobalOrders(receivedOrder)
 
-	var receivedMessage Udp_message
-	receivedMessage = <- receive_ch
-	
-	var receivedOrder Order
-	
-	err := json.Unmarshal(receivedMessage.Data, &receivedOrder)
-	
-	if (err != nil) {
-		println("Receive Order Error: ", err)
-	}
-	
-	//Init messages from the other elevators
-	if ElevOneAdress == nil {
-		ElevOneAdress = receivedMessage.Raddr
-	} else if ElevTwoAdress == nil {
-		ElevTwoAdress = receivedMessage.Raddr
-	}
-	
-	//Set other elevators positon
-	if receivedMessage.Raddr == "???" {
-		ElevOneFloor = receivedOrder.MyFloor
-		ElevOneDirection = receivedOrder.MyDirection
-	} else if receivedMessage.Raddr == "???2" {
-		ElevTwoFloor = receivedOrder.MyFloor
-		ElevTwoDirection = receivedOrder.MyDirection
-	}
-	
-	//regn ut kost
-	//legg til i globalOrders
-		//evt også i myOrders
-		
-	
 }
+
 
 
 

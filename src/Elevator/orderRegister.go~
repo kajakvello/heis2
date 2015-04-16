@@ -4,19 +4,23 @@ import (
 	."./../Driver"
 	"encoding/json"
 	."./../Udp"
+	."time"
 )
 
+
+
+//Lager en liste for antall heiser, men adresse, posisjon og retning.
+//Om en heis faller ut (vi ikke får meldinger etter viss tid), settes floor og direction til -2.
+//Om en bestilling ikke har blitt tatt, regner gjenværende heiser ut ny cost seg i mellom.
 
 
 
 //ElevatorPositions:
 //Sets from senders adress where the other elevators are located
-ElevOneAdress string	//brukes for å gi senderene rett variable. Brukes for å sjekke hvilken heis som skal forandres floor og direction på.
-ElevOneFloor int
-ElevOneDirection int
-ElevTwoAdress string
-ElevTwoFloor int
-ElevTwoDirection int
+
+
+var orderHandled chan int		//sletter timer dersom order er tatt
+
 
 
 
@@ -64,7 +68,7 @@ func UpdateMyOrders(receivedOrder Order) {
 		}
 
 		
-	} else {
+	} else if receviedOrder.NewOrder {
 	
 		if receivedOrder.Direction == 0 {
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
@@ -78,8 +82,10 @@ func UpdateMyOrders(receivedOrder Order) {
 		} else {
 			println("Unvalid direction, or unvalid floor")
 		}	
+		
+	} else {
+		println("Error in update my order")
 	}
-	
 
 }
 
@@ -89,10 +95,15 @@ func UpdateMyOrders(receivedOrder Order) {
 // Runs everytime the program receives a new order
 func UpdateGlobalOrders(receivedOrder Order) {
 
-	if receivedOrder.OrderHandledAtFloor {
+	if globalOrders[receivedOrder.Floor] == false {
+		setGlobalOrderTimer(receivedOrder)
+	}
 	
+	if receivedOrder.OrderHandledAtFloor {
+		
 		globalOrders[receivedOrder.Floor] = false
 		globalOrders[N_FLOORS-2 + receivedOrder.Floor] = false
+		orderHandled <- receivedOrder.Floor
 		
 		if (receivedOrder.Floor < N_FLOORS-1) {
 			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
@@ -101,19 +112,24 @@ func UpdateGlobalOrders(receivedOrder Order) {
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
 		}
 		
-	} else {
+	} else if receivedOrder.NewOrder {
 	
 		if receivedOrder.Direction == 1 {
 			globalOrders[receivedOrder.Floor] = true
 			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 1)
+			setOrder <- receivedOrder.Floor
 		} else if receivedOrder.Direction == 0 {
 			globalOrders[N_FLOORS-2 + receivedOrder.Floor] = true
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
+			setOrder <- N_FLOORS-2 + receivedOrder.Floor
 		} else {
 			println("Not valid direction, or unvalid floor")
 		}
 		
+	} else {
+		println("Error in update global order")
 	}
+
 }
 
 
@@ -124,6 +140,7 @@ func UpdateGlobalOrders(receivedOrder Order) {
 func DeleteAllOrders() {
 	for j:=0; j<N_FLOORS*2-2; j++ {
 		globalOrders[j] = false
+		orderHandled <- j
 	}
 
 	for j:=0; j<N_FLOORS; j++ {
@@ -197,21 +214,48 @@ func EmptyQueue() bool {
 
 
 
+
+
+func setGlobalOrderTimer(order Order) {
+	
+	timer := NewTimer(10*Second)
+	for {
+		select {
+		case <- timer.C:
+			println("Order not handled")
+			UpdateMyOrders(order)
+			timer.Stop()
+			go setGlobalOrderTimer(order)
+			return
+		case i := <- orderHandled:
+			if i == order.Floor {
+				timer.Stop()				//Endret fra Reset() til Stop()
+				return
+			}
+		}
+	}
+}
+
+
+
+
+
 func SendOrder(order Order) {
 	b, err := json.Marshal(order)
-	
-	var message Udp_message
-	message.Data = b
-	message.Raddr = "broadcast"
-	
 	
 	if (err != nil) {
 		println("Send Order Error: ", err)
 	}
 	
+	var message Udp_message
+	message.Data = b
+	message.Raddr = "broadcast"
+	message.Length = 1024
+	
 	Send_ch <- message
 	
 }
+
 
 
 

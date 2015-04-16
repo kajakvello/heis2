@@ -11,12 +11,14 @@ var Send_ch chan Udp_message
 
 type Order struct {
 
+	//My posistion:
 	MyFloor int
 	MyDirection int
 	//Order:
-	Floor int
-	Direction int // 1 = UP, 0 = DOWN, -1 = INSIDE
+	Floor int				
+	Direction int 				// 1 = UP, 0 = DOWN, -1 = INSIDE
 	OrderHandledAtFloor bool 
+	NewOrder bool
 	
 }
 
