@@ -35,7 +35,7 @@ var openDoor = make(chan bool)
 
 func Init(localPort, broadcastPort, message_size int) {
 	
-	err := Udp_init(localPort, broadcastPort, message_size, Send_ch, receive_ch)
+	err := Udp_init(localPort, broadcastPort, message_size, send_ch, receive_ch)
 	if err != nil {
 		println("Error during udp-init")
 		return
