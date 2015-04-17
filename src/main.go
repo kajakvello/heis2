@@ -54,9 +54,8 @@ func main(){
 	go DoorControl()
 
 	
-	//go ReceiveOrder()
-	//go checklastfloor()????
-	//go checktimer()????
+	go ReceiveOrder()
+	go SendUpdateMessage()
 	
 
 	s := make(chan int)
