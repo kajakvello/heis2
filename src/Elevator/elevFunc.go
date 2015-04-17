@@ -440,8 +440,9 @@ func sendOrder(order Order) {
 
 
 
+
 // go fra main. sender hvert sekund oppdatering på floor og direction
-func SendUpdateOrder(Send_ch chan Udp_message) {
+func SendUpdateMessage() {
 	for {
 		order := Order{myFloor, myDirection, -1, -1, false, false}
 		b, err := json.Marshal(order)
@@ -462,7 +463,7 @@ func SendUpdateOrder(Send_ch chan Udp_message) {
 
 
 
-
+//Used to stop the program and elevator from running
 func Stop(ch chan int) {
 	for {
 		if Elev_get_stop_signal() != 0 {
