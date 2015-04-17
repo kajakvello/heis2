@@ -58,7 +58,6 @@ func UpdateMyOrders(receivedOrder Order) {
 		up[receivedOrder.Floor] = false
 		down[receivedOrder.Floor] = false
 		
-		//SendOrder(receivedOrder)
 		Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
 		if (receivedOrder.Floor < N_FLOORS-1) {
 			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
@@ -159,17 +158,29 @@ func DeleteAllOrders() {
 
 
 
-
+//TODO: Lurer på om denne kan sjekke global liste i stede, så den tar bestillingen om den plutselig når fram først.
 // Returns true if the elevator should take an order from "floor". If it exists an order in the same direction as the elevator is headed.
 func GetOrder(direction int, floor int) bool {
+	/*
+	if inside[floor] {
+		return true	
+	}
+	if (globalOrders[floor]) && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
+		return true	
+	}
+	if (globalOrders[N_FLOORS-2+floor] && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) {
+		return true
+	}
+	return false
+	*/
 
-	if (inside[floor] == true) {
+	if inside[floor] {
 		return true
 	}
-	if ( up[floor] == true && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) ) {
+	if up[floor] && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
 		return true
 	}
-	if ( down[floor] == true && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) ) {
+	if down[floor] && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) {
 		return true
 	}
 	return false
@@ -239,21 +250,7 @@ func setGlobalOrderTimer(order Order) {
 
 
 
-func SendOrder(order Order) {
-	b, err := json.Marshal(order)
-	
-	if (err != nil) {
-		println("Send Order Error: ", err)
-	}
-	
-	var message Udp_message
-	message.Data = b
-	message.Raddr = "broadcast"
-	message.Length = 1024
-	
-	Send_ch <- message
-	
-}
+
 
 
 
