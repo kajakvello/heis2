@@ -8,7 +8,7 @@ import (
 )
 
 
-var Send_ch chan Udp_message
+//var Send_ch chan Udp_message
 
 type Order struct {
 

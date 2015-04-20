@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 	"net"
 	."strings"
-	"strconv"
+	//"strconv"
+	."math"
 )
 
 
@@ -15,8 +16,8 @@ import (
 const localPort = 20016
 const broadcastPort = 20017
 const message_size = 1024
-var receive_ch chan Udp_message
-var send_ch chan Udp_message
+var receive_ch = make(chan Udp_message)
+var send_ch = make(chan Udp_message)
 
 
 
@@ -174,16 +175,7 @@ func CheckButtonCallUp() {
 					openDoor <- true
 				} else {
 					newOrder := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
-					if getCost(i, 1) == 1 {
-						if EmptyQueue() {
-							UpdateMyOrders(newOrder)
-							setDirection()
-						} else {
-							UpdateMyOrders(newOrder)
-						}
-					} else {
-						go sendOrder(newOrder)
-					}
+					go sendOrder(newOrder)
 				}
 			}
 		}
@@ -205,16 +197,7 @@ func CheckButtonCallDown() {
 					openDoor <- true
 				} else {
 					newOrder := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
-					if getCost(i, 1) == 1 {
-						if EmptyQueue() {
-							UpdateMyOrders(newOrder)
-							setDirection()
-						} else {
-							UpdateMyOrders(newOrder)
-						}
-					} else {
-						go sendOrder(newOrder)
-					}
+					go sendOrder(newOrder)
 				}
 			}
 		}
@@ -307,6 +290,39 @@ func setDirection(){
 //Calculates cost, returns 1 if myElev got the lowest cost
 func getCost(orderFloor int, orderDirection int) int {
 	
+	myCost := Abs(float64(orderFloor - myFloor))
+	
+	for i:=0; i<N_FLOORS; i++ {
+		if Up[i] || Down[i] || Inside[i] {
+			myCost += 3
+		} 
+	}
+	
+	if orderDirection != myDirection {
+		myCost += 10
+	}
+	
+	for _, val := range elevators {
+		
+		elevCost := Abs(float64(orderFloor - val.LastFloor))
+	
+		for i:=0; i<N_FLOORS; i++ {
+			if val.Up[i] || val.Down[i] || val.Inside[i] {
+				elevCost += 3
+			}
+		}
+	
+		if orderDirection != val.Direction {
+			elevCost += 10
+		}
+		
+		if elevCost < myCost {
+			return 0
+		}
+	}
+	return 1
+	
+	/*
 	myCost := 1 //regner ut egen cost
 	lowestCost := myCost
 	equalCost := 0
@@ -335,6 +351,7 @@ func getCost(orderFloor int, orderDirection int) int {
 		return 0
 	} 
 	return 0
+	*/
 }
 
 
@@ -347,38 +364,38 @@ func ReceiveMessage() {
 		receivedMessage = <- receive_ch
 		
 		IP := getIP(receivedMessage.Raddr)
+		println("Raddr = ", IP)
 		
 		if IP == myAddress {
-			break
-		}
-		
-		var receivedOrder Order
-		err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
-		if (err != nil) {
-			println("Receive Order Error: ", err)
-		}
+			continue
+		} else {
+			var receivedOrder Order
+			err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
+			if (err != nil) {
+				println("Receive Order Error: ", err)
+			}
 
 		
-		if receivedOrder.NewOrder {
-			receiveOrder(receivedOrder)
-		}
-		
-		
-		newElevator := true	
-		for key,_ := range elevators {
-			if key == IP {
-				newElevator = false
+			if receivedOrder.NewOrder {
+				receiveOrder(receivedOrder)
 			}
+		
+		
+			newElevator := true	
+			for key,_ := range elevators {
+				if key == IP {
+					newElevator = false
+				}
+			}
+		
+			if newElevator {
+				go setMessageTimer(IP)
+			} else {
+				gotMessage <- IP
+			}
+		
+			elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 	
 		}
-		
-		if newElevator {
-			go setMessageTimer(IP)
-		} else {
-			gotMessage <- IP
-		}
-		
-		elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 	
-		
 	}
 }
 
@@ -421,12 +438,21 @@ func setMessageTimer(address string) {
 //Receives orders from other elevators
 func receiveOrder(receivedOrder Order) {
 	
-	cost := getCost(receivedOrder.Floor, receivedOrder.Direction)
+	SetButtonLight(receivedOrder)
 	
-	if cost == 1 {
-		UpdateMyOrders(receivedOrder)
+	for key,_ := range elevators{
+		println(key)
+	
+	} 
+	
+	if getCost(receivedOrder.Floor, receivedOrder.Direction) == 1 {
+		if EmptyQueue() {
+			UpdateMyOrders(receivedOrder)
+			setDirection()
+		} else {
+			UpdateMyOrders(receivedOrder)
+		}
 	}
-	
 }
 
 
@@ -444,7 +470,7 @@ func sendOrder(order Order) {
 	message.Data = b
 	message.Length = 1024
 	
-	Send_ch <- message
+	send_ch <- message
 }
 
 
@@ -465,9 +491,10 @@ func SendUpdateMessage() {
 		message.Data = b
 		message.Length = 1024
 		
-		Send_ch <- message
+		send_ch <- message
+		Sleep(1*Second)
 	}
-	Sleep(1*Second)
+	
 }
 
 

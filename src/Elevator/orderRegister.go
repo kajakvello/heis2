@@ -45,23 +45,15 @@ func UpdateMyOrders(receivedOrder Order) {
 		Down[receivedOrder.Floor] = false
 		
 		Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
-		if (receivedOrder.Floor < N_FLOORS-1) {
-			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
-		}
-		if (receivedOrder.Floor > 0) {
-			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
-		}
 
 		
 	} else if receivedOrder.NewOrder {
 	
 		if receivedOrder.Direction == 0 {
 			Down[receivedOrder.Floor] = true
-			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
 			
 		} else if receivedOrder.Direction == 1 {
 			Up[receivedOrder.Floor] = true
-			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 1)
 			
 		} else if receivedOrder.Direction == -1 {
 			Inside[receivedOrder.Floor] = true
@@ -75,6 +67,25 @@ func UpdateMyOrders(receivedOrder Order) {
 		println("Error in update my order")
 	}
 
+}
+
+
+func SetButtonLight(order Order) {
+	
+	if order.NewOrder && order.Direction == 0 {
+		Elev_set_button_lamp(BUTTON_CALL_DOWN, order.Floor, 1)
+		
+	} else if order.NewOrder && order.Direction == 1 {
+		Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 1)
+		
+	} else if order.OrderHandledAtFloor {
+		if order.Floor < N_FLOORS-1 {
+			Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 0)
+		}
+		if order.Floor > 0 {
+			Elev_set_button_lamp(BUTTON_CALL_DOWN, order.Floor, 0)
+		}
+	}
 }
 
 

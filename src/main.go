@@ -1,27 +1,22 @@
 package main
 
 import(
-
 	."./Elevator"
 	."./Driver"
-	//"timer"
-	//"fmt"
-	//"net"
-	//."time"
-	//"strings"
-	//"strconv"
 )
 
 
 //TODO: 
 // - Lage kostfunksjon
 // - Gjøre slik at de kan dra i heisen
+// - Send Order i loop med alle bestillinger om heis faller ut av nettverket
+// - Fikse buttonlys 
 
 
 
 
 
-func main(){	
+func main() {
 	
 	//Initialiser heis
 	Init()
