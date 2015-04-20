@@ -18,7 +18,7 @@ import (
 //Sets from senders adress where the other elevators are located
 
 
-var orderHandled chan int		//sletter timer dersom order er tatt
+var orderHandled = make(chan int)		//sletter timer dersom order er tatt
 
 
 
@@ -96,8 +96,8 @@ func UpdateMyOrders(receivedOrder Order) {
 // Runs everytime the program receives a new order
 func UpdateGlobalOrders(receivedOrder Order) {
 
-	if globalOrders[receivedOrder.Floor] == false {
-		setGlobalOrderTimer(receivedOrder)
+	if (globalOrders[receivedOrder.Floor] == false) && (receivedOrder.NewOrder){
+		go setGlobalOrderTimer(receivedOrder)
 	}
 	
 	if receivedOrder.OrderHandledAtFloor {
@@ -170,7 +170,7 @@ func GetOrder(direction int, floor int) bool {
 	if (globalOrders[floor]) && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
 		return true	
 	}
-	if (globalOrders[N_FLOORS-2+floor]) && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) {
+	if (globalOrders[N_FLOORS-2+floor]) && (direction == 0 || direction == -1 || floor == N_FLOORS -1 || !CheckOrdersAboveFloor(floor)) {
 		return true
 	}
 	return false
@@ -182,7 +182,7 @@ func GetOrder(direction int, floor int) bool {
 	if up[floor] && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
 		return true
 	}
-	if down[floor] && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) {
+	if down[floor] && (direction == 0 || direction == -1 || floor == N_FLOORS-1 || !CheckOrdersAboveFloor(floor)) {
 		return true
 	}
 	return false
@@ -230,21 +230,27 @@ func EmptyQueue() bool {
 
 
 
-func setGlobalOrderTimer(order Order) {
+func setGlobalOrderTimer(order Order) {  //TODO: When timer out -> find cost & decide which elev instead of UpdateMyOrders
 	
 	timer := NewTimer(10*Second)
+	println("Spawned thread for floor", order.Floor)
+	
 	for {
 		select {
 		case <- timer.C:
-			println("Order not handled")
+			println("Order not handled at floor", order.Floor)
 			UpdateMyOrders(order)
-			go setGlobalOrderTimer(order)
-			return
+			
+			timer.Reset(10*Second)
+			
 		case i := <- orderHandled:
+			
+			println("orderHandled at floor", i, "this thread is for floor", order.Floor)
 			if i == order.Floor {
-				timer.Stop()				//Endret fra Reset() til Stop()
+				timer.Stop()
 				return
 			}
+			println("Not returned. i =", i, "order.Floor = ", order.Floor)
 		}
 	}
 }

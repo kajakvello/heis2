@@ -45,7 +45,6 @@ func main(){
 	
 	*/
 	
-	//TODO: go inni for eller for inni go?
 	
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()

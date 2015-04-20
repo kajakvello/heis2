@@ -18,7 +18,7 @@ type ElevStatus struct{
 
 var myFloor = -1
 var lastFloor = 0
-var myDirection = -1	// -1 = står i ro, 1 = opp, 0 = ned
+var myDirection = -1	// -1 = står i ro, 1 = opp, 0 = ned 
 var doorOpen = false
 var myAddress string
 var elevators = make(map[string]ElevStatus)
@@ -40,7 +40,7 @@ func Init(localPort, broadcastPort, message_size int) {
 		return
 	}
 	
-	Elev_init()		//Fra driver.go
+	Elev_init()		
 	DeleteAllOrders()
 	for Elev_get_floor_sensor_signal() != 0 {
 		Elev_set_motor_direction(-300)
@@ -120,6 +120,7 @@ func floorReached(floor int) {
 	Elev_set_floor_indicator(floor)
 	
 	
+	
 	//TODO: Lurer på om GetORder kan sjekke globalliste, så heisen stopper om den når fram før noen andre.
 	if (GetOrder(myDirection, floor)) {		//Stops, if orders on floor
 		if myDirection == 1 {
@@ -191,7 +192,7 @@ func CheckButtonCallDown() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 1, false, true}
+					newOrder := Order{myFloor, myDirection, i, 0, false, true}
 					if getCost(i, 1) == 1 {
 						if EmptyQueue() {
 							UpdateMyOrders(newOrder)
@@ -257,7 +258,7 @@ func DoorControl() {
 				}
 				
 			case <- timer.C:
-				println("timer out")
+				println("door timer out")
 				Elev_set_door_open_lamp(0)
 				doorOpen = false
 				setDirection()
