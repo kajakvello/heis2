@@ -1,12 +1,10 @@
 package Elevator
 
 import (
-	//."./../orderRegister"
 	."./../Driver"
 	."time"
 	."./../Udp"
 	"encoding/json"
-	"fmt"
 	"net"
 	."strings"
 	"strconv"
@@ -29,12 +27,13 @@ var elevators = make(map[string]ElevStatus)
 var receive_ch chan Udp_message
 var send_ch chan Udp_message
 var openDoor = make(chan bool)
+var gotMessage = make(chan string)
 
 
 //Elevfunc skal ha initfunksjon, alle elevfunksjoner og de fleste variabler, troooor jeg
 
 func Init(localPort, broadcastPort, message_size int) {
-	
+
 	err := Udp_init(localPort, broadcastPort, message_size, send_ch, receive_ch)
 	if err != nil {
 		println("Error during udp-init")
@@ -61,7 +60,7 @@ func Init(localPort, broadcastPort, message_size int) {
 			if ipnet.IP.To4() != nil {
 				ip := ipnet.IP.String()
 				splitip := Split(ip, ".")
-				myAddress := splitip[3]
+				myAddress = splitip[3]
 			}
 		}
 	}
@@ -258,7 +257,7 @@ func DoorControl() {
 				}
 				
 			case <- timer.C:
-				println("timer out")
+				println("door timer out")
 				Elev_set_door_open_lamp(0)
 				doorOpen = false
 				setDirection()
@@ -303,7 +302,7 @@ func getCost(orderFloor int, orderDirection int) int {
 	elevKey := ""
 	
 	for key, val := range elevators {
-		elevCost := 1 			//costfunksjon ut fra val.LastFloor og val.Direction
+		elevCost := val.LastFloor + 10 			//costfunksjon ut fra val.LastFloor og val.Direction
 		if elevCost < lowestCost {
 			lowestCost = elevCost
 			return 0
@@ -317,8 +316,8 @@ func getCost(orderFloor int, orderDirection int) int {
 	if (myCost == lowestCost) && (equalCost == 0) {
 		return 1
 	} else if (myCost == equalCost) && (myCost == lowestCost) {
-		myAddr, _ := strconv.Atoi(myAdress)
-		elevAddr, _ := strconv.Atoi(elevators[elevKey])
+		myAddr, _ := strconv.Atoi(myAddress)
+		elevAddr, _ := strconv.Atoi(elevKey)
 		if myAddr < elevAddr {
 			return 1
 		}
@@ -338,7 +337,7 @@ func ReceiveMessage() {
 		
 		IP := getIP(receivedMessage.Raddr)
 		
-		if IP == MyAddress {
+		if IP == myAddress {
 			break
 		}
 		
@@ -349,7 +348,7 @@ func ReceiveMessage() {
 		}
 
 		
-		if receivedOrder.newOrder {
+		if receivedOrder.NewOrder {
 			receiveOrder(receivedOrder)
 		}
 		
@@ -367,7 +366,7 @@ func ReceiveMessage() {
 			gotMessage <- IP
 		}
 		
-		elevators[IP] = ElevStatus{LastFloor: receivedMessage.MyFloor, Direction: receivedMessage.MyDirection} 	
+		elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection} 	
 		
 	}
 }

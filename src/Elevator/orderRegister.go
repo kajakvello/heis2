@@ -2,7 +2,6 @@ package Elevator
 
 import (
 	."./../Driver"
-	"encoding/json"
 	."./../Udp"
 	."time"
 )
@@ -67,17 +66,20 @@ func UpdateMyOrders(receivedOrder Order) {
 		}
 
 		
-	} else if receviedOrder.NewOrder {
+	} else if receivedOrder.NewOrder {
 	
 		if receivedOrder.Direction == 0 {
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
 			down[receivedOrder.Floor] = true
+			
 		} else if receivedOrder.Direction == 1 {
 			up[receivedOrder.Floor] = true
 			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 1)
+			
 		} else if receivedOrder.Direction == -1 {
 			inside[receivedOrder.Floor] = true
 			Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 1)
+			
 		} else {
 			println("Unvalid direction, or unvalid floor")
 		}	
@@ -116,11 +118,11 @@ func UpdateGlobalOrders(receivedOrder Order) {
 		if receivedOrder.Direction == 1 {
 			globalOrders[receivedOrder.Floor] = true
 			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 1)
-			setOrder <- receivedOrder.Floor
+			
 		} else if receivedOrder.Direction == 0 {
 			globalOrders[N_FLOORS-2 + receivedOrder.Floor] = true
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 1)
-			setOrder <- N_FLOORS-2 + receivedOrder.Floor
+			
 		} else {
 			println("Not valid direction, or unvalid floor")
 		}
@@ -139,7 +141,7 @@ func UpdateGlobalOrders(receivedOrder Order) {
 func DeleteAllOrders() {
 	for j:=0; j<N_FLOORS*2-2; j++ {
 		globalOrders[j] = false
-		orderHandled <- j
+		//orderHandled <- j
 	}
 
 	for j:=0; j<N_FLOORS; j++ {
@@ -161,19 +163,19 @@ func DeleteAllOrders() {
 //TODO: Lurer på om denne kan sjekke global liste i stede, så den tar bestillingen om den plutselig når fram først.
 // Returns true if the elevator should take an order from "floor". If it exists an order in the same direction as the elevator is headed.
 func GetOrder(direction int, floor int) bool {
-	/*
+	
 	if inside[floor] {
 		return true	
 	}
 	if (globalOrders[floor]) && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
 		return true	
 	}
-	if (globalOrders[N_FLOORS-2+floor] && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) {
+	if (globalOrders[N_FLOORS-2+floor]) && (direction == 0 || direction == -1 || floor == 3 || !CheckOrdersAboveFloor(floor)) {
 		return true
 	}
 	return false
-	*/
-
+	
+	/*
 	if inside[floor] {
 		return true
 	}
@@ -184,6 +186,7 @@ func GetOrder(direction int, floor int) bool {
 		return true
 	}
 	return false
+	*/
 }
 
 

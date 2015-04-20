@@ -1,11 +1,9 @@
 package main
 
 import(
-	
-	//. "./udp"
+
+	."./Elevator"
 	."./Driver"
-	. "./Elevator"
-	//. "./orderRegister"
 	//"timer"
 	//"fmt"
 	//"net"
@@ -17,6 +15,13 @@ import(
 const localPort = 20016
 const broadcastPort = 20017
 const message_size = 1024
+
+
+//TODO: 
+// - Lage kostfunksjon
+// - Skal elevators ta i mot seg selv og ha i map?
+
+
 
 
 
@@ -50,9 +55,8 @@ func main(){
 	go DoorControl()
 
 	
-	//go ReceiveOrder()
-	//go checklastfloor()????
-	//go checktimer()????
+	go ReceiveMessage()
+	go SendUpdateMessage()
 	
 
 	s := make(chan int)

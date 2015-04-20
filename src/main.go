@@ -2,7 +2,8 @@ package main
 
 import(
 
-	//. "./orderRegister"
+	."./Elevator"
+	."./Driver"
 	//"timer"
 	//"fmt"
 	//"net"
@@ -54,7 +55,7 @@ func main(){
 	go DoorControl()
 
 	
-	go ReceiveOrder()
+	go ReceiveMessage()
 	go SendUpdateMessage()
 	
 
