@@ -12,14 +12,10 @@ import(
 	//"strconv"
 )
 
-const localPort = 20016
-const broadcastPort = 20017
-const message_size = 1024
-
 
 //TODO: 
 // - Lage kostfunksjon
-// - Skal elevators ta i mot seg selv og ha i map?
+// - Gjøre slik at de kan dra i heisen
 
 
 
@@ -28,7 +24,7 @@ const message_size = 1024
 func main(){	
 	
 	//Initialiser heis
-	Init(localPort, broadcastPort, message_size)
+	Init()
 	
 	/*
 	

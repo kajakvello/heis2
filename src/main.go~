@@ -12,10 +12,6 @@ import(
 	//"strconv"
 )
 
-const localPort = 20016
-const broadcastPort = 20017
-const message_size = 1024
-
 
 //TODO: 
 // - Lage kostfunksjon
@@ -28,7 +24,7 @@ const message_size = 1024
 func main(){	
 	
 	//Initialiser heis
-	Init(localPort, broadcastPort, message_size)
+	Init()
 	
 	/*
 	
@@ -45,7 +41,6 @@ func main(){
 	
 	*/
 	
-	//TODO: go inni for eller for inni go?
 	
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()

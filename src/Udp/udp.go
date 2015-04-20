@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	."./../Driver"
 )
 
 
@@ -19,7 +20,11 @@ type Order struct {
 	Direction int 				// 1 = UP, 0 = DOWN, -1 = INSIDE
 	OrderHandledAtFloor bool 
 	NewOrder bool
-	
+	//My orders:
+	Up [N_FLOORS]bool
+	Down [N_FLOORS]bool
+	Inside [N_FLOORS]bool
+		
 }
 
 

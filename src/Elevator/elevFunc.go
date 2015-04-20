@@ -10,9 +10,22 @@ import (
 	"strconv"
 )
 
+
+
+const localPort = 20016
+const broadcastPort = 20017
+const message_size = 1024
+var receive_ch chan Udp_message
+var send_ch chan Udp_message
+
+
+
 type ElevStatus struct{
 	LastFloor int
 	Direction int
+	Up [N_FLOORS]bool
+	Down [N_FLOORS]bool
+	Inside [N_FLOORS]bool
 }
 
 
@@ -24,15 +37,14 @@ var myAddress string
 var elevators = make(map[string]ElevStatus)
 
 
-var receive_ch chan Udp_message
-var send_ch chan Udp_message
+
 var openDoor = make(chan bool)
 var gotMessage = make(chan string)
 
 
 //Elevfunc skal ha initfunksjon, alle elevfunksjoner og de fleste variabler, troooor jeg
 
-func Init(localPort, broadcastPort, message_size int) {
+func Init() {
 
 	err := Udp_init(localPort, broadcastPort, message_size, send_ch, receive_ch)
 	if err != nil {
@@ -161,7 +173,7 @@ func CheckButtonCallUp() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 1, false, true}
+					newOrder := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
 					if getCost(i, 1) == 1 {
 						if EmptyQueue() {
 							UpdateMyOrders(newOrder)
@@ -169,9 +181,9 @@ func CheckButtonCallUp() {
 						} else {
 							UpdateMyOrders(newOrder)
 						}
+					} else {
+						go sendOrder(newOrder)
 					}
-					go sendOrder(newOrder)
-					UpdateGlobalOrders(newOrder)
 				}
 			}
 		}
@@ -192,7 +204,7 @@ func CheckButtonCallDown() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 0, false, true}
+					newOrder := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
 					if getCost(i, 1) == 1 {
 						if EmptyQueue() {
 							UpdateMyOrders(newOrder)
@@ -200,9 +212,9 @@ func CheckButtonCallDown() {
 						} else {
 							UpdateMyOrders(newOrder)
 						}
+					} else {
+						go sendOrder(newOrder)
 					}
-					go sendOrder(newOrder)
-					UpdateGlobalOrders(newOrder)
 				}
 			}
 		}
@@ -223,7 +235,7 @@ func CheckButtonCommand() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, -1, false, true}
+					newOrder := Order{myFloor, myDirection, i, -1, false, true, Up, Down, Inside}
 					if EmptyQueue() {
 						UpdateMyOrders(newOrder)
 						setDirection()
@@ -251,9 +263,8 @@ func DoorControl() {
 				Elev_set_door_open_lamp(1)
 				timer.Reset(Second*3)
 				if Elev_get_floor_sensor_signal() == lastFloor {
-					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false}
+					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false, Up, Down, Inside}
 					UpdateMyOrders(deleteOrder)
-					UpdateGlobalOrders(deleteOrder)
 					go sendOrder(deleteOrder)
 				}
 				
@@ -366,7 +377,7 @@ func ReceiveMessage() {
 			gotMessage <- IP
 		}
 		
-		elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection} 	
+		elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 	
 		
 	}
 }
@@ -415,8 +426,7 @@ func receiveOrder(receivedOrder Order) {
 	if cost == 1 {
 		UpdateMyOrders(receivedOrder)
 	}
-	UpdateGlobalOrders(receivedOrder)
-
+	
 }
 
 
@@ -443,7 +453,7 @@ func sendOrder(order Order) {
 // go fra main. sender hvert sekund oppdatering på floor og direction
 func SendUpdateMessage() {
 	for {
-		order := Order{myFloor, myDirection, -1, -1, false, false}
+		order := Order{myFloor, myDirection, -1, -1, false, false, Up, Down, Inside}
 		b, err := json.Marshal(order)
 		
 		if (err != nil) {
