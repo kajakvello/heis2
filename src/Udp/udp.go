@@ -17,8 +17,8 @@ type Order struct {
 	MyDirection int
 	//Order:
 	Floor int				
-	Direction int 				// 1 = UP, 0 = DOWN, -1 = INSIDE
-	OrderHandledAtFloor bool 
+	Direction int 		// 1 = UP, 0 = DOWN, -1 = INSIDE
+	OrderHandled bool 
 	NewOrder bool
 	//My orders:
 	Up [N_FLOORS]bool

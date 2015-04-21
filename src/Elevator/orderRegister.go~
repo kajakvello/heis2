@@ -45,12 +45,6 @@ func UpdateMyOrders(receivedOrder Order) {
 		Down[receivedOrder.Floor] = false
 		
 		Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
-		if (receivedOrder.Floor < N_FLOORS-1) {
-			Elev_set_button_lamp(BUTTON_CALL_UP, receivedOrder.Floor, 0)
-		}
-		if (receivedOrder.Floor > 0) {
-			Elev_set_button_lamp(BUTTON_CALL_DOWN, receivedOrder.Floor, 0)
-		}
 
 		
 	} else if receivedOrder.NewOrder {

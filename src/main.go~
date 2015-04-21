@@ -10,7 +10,6 @@ import(
 // - Lage kostfunksjon
 // - Gjøre slik at de kan dra i heisen
 // - Send Order i loop med alle bestillinger om heis faller ut av nettverket
-// - Fikse buttonlys
 
 
 

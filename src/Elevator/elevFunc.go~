@@ -52,10 +52,11 @@ func Init() {
 		println("Error during udp-init")
 		return
 	}
-	
+	println("haho")
 	Elev_init()		
 	DeleteAllOrders()
 	for Elev_get_floor_sensor_signal() != 0 {
+		println("hoho")
 		Elev_set_motor_direction(-300)
 	}
 	Elev_set_motor_direction(50)
@@ -92,7 +93,7 @@ func RunElevator() {
 			Sleep(100*Millisecond)
 		} else {
 			if (EmptyQueue()){
-				setDirection()
+				myDirection = -1
 			}
 
 			if myDirection == 0 {
@@ -175,17 +176,7 @@ func CheckButtonCallUp() {
 					openDoor <- true
 				} else {
 					newOrder := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
-					if getCost(i, 1) == 1 {
-						if EmptyQueue() {
-							UpdateMyOrders(newOrder)
-							setDirection()
-						} else {
-							UpdateMyOrders(newOrder)
-						}
-					} else {
-					
-						go sendOrder(newOrder)
-					}
+					go sendOrder(newOrder)
 				}
 			}
 		}
@@ -257,7 +248,6 @@ func DoorControl() {
 				timer.Reset(Second*3)
 				if Elev_get_floor_sensor_signal() == lastFloor {
 					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false, Up, Down, Inside}
-					UpdateMyOrders(deleteOrder)
 					go sendOrder(deleteOrder)
 				}
 				
@@ -374,22 +364,20 @@ func ReceiveMessage() {
 		receivedMessage = <- receive_ch
 		
 		IP := getIP(receivedMessage.Raddr)
-		println("Raddr = ", IP)
 		
-		if IP == myAddress {
-			continue
-		} else {
-			var receivedOrder Order
-			err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
-			if (err != nil) {
-				println("Receive Order Error: ", err)
-			}
+		
+		var receivedOrder Order
+		err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
+		if (err != nil) {
+			println("Receive Order Error: ", err)
+		}
 
-		
-			if receivedOrder.NewOrder {
-				receiveOrder(receivedOrder)
-			}
-		
+	
+		if receivedOrder.NewOrder || receivedOrder.OrderHandled {
+			receiveOrder(receivedOrder)
+		}
+	
+		if IP != myAddress {
 		
 			newElevator := true	
 			for key,_ := range elevators {
@@ -397,13 +385,13 @@ func ReceiveMessage() {
 					newElevator = false
 				}
 			}
-		
+	
 			if newElevator {
 				go setMessageTimer(IP)
 			} else {
 				gotMessage <- IP
 			}
-		
+	
 			elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 	
 		}
 	}
@@ -429,8 +417,19 @@ func setMessageTimer(address string) {
 	for {
 		select {
 		case <- timer.C:
+			/*for i:=0; i<N_FLOORS; i++ {
+				if (elevators[address].Up)[i] {
+					order := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
+					go sendOrder(order)
+				}
+				if (elevators[address].Down)[i] {
+					order := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
+					go sendOrder(order)
+				}	
+			}*/
 			delete (elevators, address)
 			return
+			
 		case receivedAddress := <- gotMessage:
 			if receivedAddress == address {
 				timer.Reset(3*Second)
@@ -450,12 +449,15 @@ func receiveOrder(receivedOrder Order) {
 	
 	SetButtonLight(receivedOrder)
 	
-	for key,_ := range elevators{
-		println(key)
+	if receivedOrder.OrderHandled {
+		UpdateMyOrders(receivedOrder)
+		return
+	}
 	
-	} 
-	
-	if getCost(receivedOrder.Floor, receivedOrder.Direction) == 1 {
+	if (myDirection == -1 && myFloor == receivedOrder.Floor) || (doorOpen && myFloor == receivedOrder.Floor) {
+		openDoor <- true
+		
+	} else if getCost(receivedOrder.Floor, receivedOrder.Direction) == 1 {
 		if EmptyQueue() {
 			UpdateMyOrders(receivedOrder)
 			setDirection()

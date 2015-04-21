@@ -38,7 +38,7 @@ var Down [N_FLOORS]bool
 // Update my orders
 func UpdateMyOrders(receivedOrder Order) {
 
-	if receivedOrder.OrderHandledAtFloor {
+	if receivedOrder.OrderHandled {
 		
 		Inside[receivedOrder.Floor] = false
 		Up[receivedOrder.Floor] = false
@@ -78,7 +78,7 @@ func SetButtonLight(order Order) {
 	} else if order.NewOrder && order.Direction == 1 {
 		Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 1)
 		
-	} else if order.OrderHandledAtFloor {
+	} else if order.OrderHandled {
 		if order.Floor < N_FLOORS-1 {
 			Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 0)
 		}
