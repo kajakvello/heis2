@@ -282,36 +282,35 @@ func setDirection(){
 
 
 
-
-//Calculates cost, returns 1 if myElev got the lowest cost
+//TODO: Gange opp cost med 1000 og legge til IP, slik at cost aldri er lik
+//Nå beregnes costen for mange ganger på høyest IP (for some reason), så flere heiser tar samme best.
 func getCost(orderFloor int, orderDirection int) int {
-	
 	equalCost := []string{}
 	
 	//Find my cost:
-	myCost := Abs(float64(orderFloor - myFloor))
+	myCost := int(Abs(float64(orderFloor - myFloor))*3)
 	
 	for i:=0; i<N_FLOORS; i++ {
 		if Up[i] || Down[i] || Inside[i] {
-			myCost += 3
+			myCost += 4
 		} 
 	}
 	if orderDirection != myDirection {
-		myCost += 10
+		myCost += 1
 	}
 	
 	//Check if other elevator got lower cost:
 	for key, val := range elevators {
 		
-		elevCost := Abs(float64(orderFloor - val.LastFloor))
+		elevCost := int(Abs(float64(orderFloor - val.LastFloor))*3)
 		
 		for i:=0; i<N_FLOORS; i++ {
 			if val.Up[i] || val.Down[i] || val.Inside[i] {
-				elevCost += 3
+				elevCost += 4
 			}
 		}
 		if orderDirection != val.Direction {
-			elevCost += 10
+			elevCost += 1
 		}
 		
 		if elevCost < myCost {
@@ -326,11 +325,13 @@ func getCost(orderFloor int, orderDirection int) int {
 		for i:=0; i<len(equalCost); i++ {
 			elevAddr, _ := strconv.Atoi(equalCost[i])
 			if elevAddr < myAddr {
+				println("Lik cost. Myaddr =", myAddr, " mens elevaddr =", elevAddr, "så jeg chiller")
 				return 0
 			}
 		}
 	}
-	
+	Sleep(Millisecond*5)
+	println("Got it!! Fra IP: ", myAddress)
 	return 1
 
 }

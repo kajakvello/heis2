@@ -3,14 +3,12 @@ package main
 import(
 	."./Elevator"
 	."./Driver"
-	"strconv"
 )
 
 
 //TODO: 
 // - Lage kostfunksjon
 // - Gjøre slik at de kan dra i heisen
-// - Send Order i loop med alle bestillinger om heis faller ut av nettverket
 
 
 
@@ -20,17 +18,6 @@ func main() {
 	
 	//Initialiser heis
 	Init()
-	
-	equalCost := []string{"147", "150", "140", "155"}
-	if len(equalCost) != 0 {
-		myAddr, _ := strconv.Atoi("149")
-		for i:=0; i<len(equalCost); i++ {
-			elevAddr, _ := strconv.Atoi(equalCost[i])
-			if elevAddr < myAddr {
-				println("lower address: ", elevAddr)
-			}
-		}
-	}
 	
 	
 	go CheckButtonCallUp()

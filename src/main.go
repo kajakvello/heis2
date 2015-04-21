@@ -7,9 +7,8 @@ import(
 
 
 //TODO: 
-// - Lage kostfunksjon
+// - Fikse kostfunksjon
 // - Gjøre slik at de kan dra i heisen
-// - Send Order i loop med alle bestillinger om heis faller ut av nettverket
 
 
 
