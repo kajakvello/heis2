@@ -158,7 +158,7 @@ func udp_connection_reader(conn *net.UDPConn, message_size int, rcv_ch chan Udp_
 			fmt.Printf("Error: udp_connection_reader: reading\n")
 			panic(err)
 		}
-		rcv_ch <- Udp_message{Raddr: raddr.String(), Data: buf, Length: n}
+		rcv_ch <- Udp_message{Raddr: raddr.String(), Data: buf[:n], Length: n}
 	}
 }
 

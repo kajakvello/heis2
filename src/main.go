@@ -21,7 +21,6 @@ func main() {
 	Init()
 	
 	
-	
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()
 	go CheckButtonCommand()

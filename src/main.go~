@@ -3,6 +3,7 @@ package main
 import(
 	."./Elevator"
 	."./Driver"
+	"strconv"
 )
 
 
@@ -20,20 +21,16 @@ func main() {
 	//Initialiser heis
 	Init()
 	
-	/*
-	
-	Lytter hele tiden etter newOrder
-	Mottar newOrder på egen heis
-		om bestillingen er i samme etg som heisen er, ta bestillingen selv
-		ellers:
-			sender order, med kost til de andre heisene
-			om ikke mottatt svar etter 1 sec, ta bestillingen selv
-			om mottar svar fra annen heis, ikke ta bestillingen
-	Mottar newOrder fra annen heis
-		Sjekker sin egen kost opp mot den andres cost
-		Sender svar tilbake dersom lavere kost
-	
-	*/
+	equalCost := []string{"147", "150", "140", "155"}
+	if len(equalCost) != 0 {
+		myAddr, _ := strconv.Atoi("149")
+		for i:=0; i<len(equalCost); i++ {
+			elevAddr, _ := strconv.Atoi(equalCost[i])
+			if elevAddr < myAddr {
+				println("lower address: ", elevAddr)
+			}
+		}
+	}
 	
 	
 	go CheckButtonCallUp()

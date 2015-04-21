@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"net"
 	."strings"
-	//"strconv"
+	"strconv"
 	."math"
+	."fmt"
 )
 
 
@@ -52,11 +53,9 @@ func Init() {
 		println("Error during udp-init")
 		return
 	}
-	println("haho")
 	Elev_init()		
 	DeleteAllOrders()
 	for Elev_get_floor_sensor_signal() != 0 {
-		println("hoho")
 		Elev_set_motor_direction(-300)
 	}
 	Elev_set_motor_direction(50)
@@ -133,9 +132,6 @@ func floorReached(floor int) {
 	lastFloor = floor
 	Elev_set_floor_indicator(floor)
 	
-	
-	
-	//TODO: Lurer på om GetORder kan sjekke globalliste, så heisen stopper om den når fram før noen andre.
 	if (GetOrder(myDirection, floor)) {		//Stops, if orders on floor
 		if myDirection == 1 {
 			Elev_set_motor_direction(-100)
@@ -153,7 +149,7 @@ func floorReached(floor int) {
 		Elev_set_motor_direction(0)
 		myDirection = 1
 		
-	} else if (floor == 3) {			//Stops, so the elevator do not pass 4. floor
+	} else if (floor == N_FLOORS-1) {			//Stops, so the elevator do not pass 4. floor
 		Elev_set_motor_direction(-100)
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
@@ -180,7 +176,7 @@ func CheckButtonCallUp() {
 				}
 			}
 		}
-		Sleep(100*Millisecond)
+		Sleep(50*Millisecond)
 	}
 }
 
@@ -202,7 +198,7 @@ func CheckButtonCallDown() {
 				}
 			}
 		}
-		Sleep(100*Millisecond)
+		Sleep(50*Millisecond)
 	}
 }
 
@@ -290,6 +286,9 @@ func setDirection(){
 //Calculates cost, returns 1 if myElev got the lowest cost
 func getCost(orderFloor int, orderDirection int) int {
 	
+	equalCost := []string{}
+	
+	//Find my cost:
 	myCost := Abs(float64(orderFloor - myFloor))
 	
 	for i:=0; i<N_FLOORS; i++ {
@@ -297,62 +296,45 @@ func getCost(orderFloor int, orderDirection int) int {
 			myCost += 3
 		} 
 	}
-	
 	if orderDirection != myDirection {
 		myCost += 10
 	}
 	
-	for _, val := range elevators {
+	//Check if other elevator got lower cost:
+	for key, val := range elevators {
 		
 		elevCost := Abs(float64(orderFloor - val.LastFloor))
-	
+		
 		for i:=0; i<N_FLOORS; i++ {
 			if val.Up[i] || val.Down[i] || val.Inside[i] {
 				elevCost += 3
 			}
 		}
-	
 		if orderDirection != val.Direction {
 			elevCost += 10
 		}
 		
 		if elevCost < myCost {
 			return 0
-		}
-	}
-	return 1
-	
-	/*
-	myCost := 1 //regner ut egen cost
-	lowestCost := myCost
-	equalCost := 0
-	elevKey := ""
-	
-	for key, val := range elevators {
-		elevCost := val.LastFloor + 10 			//costfunksjon ut fra val.LastFloor og val.Direction
-		if elevCost < lowestCost {
-			lowestCost = elevCost
-			return 0
 		} else if elevCost == myCost {
-			equalCost = elevCost
-			elevKey = key
+			equalCost = append(equalCost, key)
 		}
 	}
-
 	
-	if (myCost == lowestCost) && (equalCost == 0) {
-		return 1
-	} else if (myCost == equalCost) && (myCost == lowestCost) {
+	if len(equalCost) != 0 {
 		myAddr, _ := strconv.Atoi(myAddress)
-		elevAddr, _ := strconv.Atoi(elevKey)
-		if myAddr < elevAddr {
-			return 1
+		for i:=0; i<len(equalCost); i++ {
+			elevAddr, _ := strconv.Atoi(equalCost[i])
+			if elevAddr < myAddr {
+				return 0
+			}
 		}
-		return 0
-	} 
-	return 0
-	*/
+	}
+	
+	return 1
+
 }
+
 
 
 
@@ -369,7 +351,8 @@ func ReceiveMessage() {
 		var receivedOrder Order
 		err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
 		if (err != nil) {
-			println("Receive Order Error: ", err)
+			Println("Receive Order Error: ", err)
+			Println("when decoding: ", string(receivedMessage.Data))
 		}
 
 	
@@ -392,8 +375,9 @@ func ReceiveMessage() {
 				gotMessage <- IP
 			}
 	
-			elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 	
+			elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 			
 		}
+		Sleep(Millisecond*1)
 	}
 }
 
@@ -417,7 +401,7 @@ func setMessageTimer(address string) {
 	for {
 		select {
 		case <- timer.C:
-			/*for i:=0; i<N_FLOORS; i++ {
+			for i:=0; i<N_FLOORS; i++ {
 				if (elevators[address].Up)[i] {
 					order := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
 					go sendOrder(order)
@@ -426,7 +410,7 @@ func setMessageTimer(address string) {
 					order := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
 					go sendOrder(order)
 				}	
-			}*/
+			}
 			delete (elevators, address)
 			return
 			
