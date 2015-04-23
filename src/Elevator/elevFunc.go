@@ -78,7 +78,7 @@ func PrintStatus() {
 		Println("UP: ",Up)
 		Println("DOWN: ", Down)
 		Println("INSIDE: ", Inside)
-		Sleep(10*Millisecond)
+		Sleep(1*Second)
 	}
 }
 
@@ -117,7 +117,6 @@ func UpdateFloor() {
 		    } else {
 		    	Elev_set_door_open_lamp(0)
 		    }
-		    lastFloor = myFloor
 		}
 		Sleep(100*Millisecond)
 	}
@@ -130,9 +129,9 @@ func floorReached(floor int) {
 	lastFloor = floor
 	Elev_set_floor_indicator(floor)
 	
-	isOrder, orderDir := GetOrder(myDirection, floor)
+	orderDir := GetOrder(myDirection, floor) 
 	
-	if isOrder {				
+	if orderDir != 2 {				
 		if myDirection == 1 {
 			Elev_set_motor_direction(-100)
 		} else if (myDirection == 0) {
@@ -143,7 +142,7 @@ func floorReached(floor int) {
 	
 		openDoor <- true
 		
-		deleteOrder := Order{myFloor, myDirection, floor, orderDir, true, false, Up, Down, Inside}
+		deleteOrder := Order{lastFloor, myDirection, floor, orderDir, true, false, Up, Down, Inside}
 		go sendOrder(deleteOrder)
 		
 	} else if (floor == 0) {				//Stops, so the elevator do not pass 1. floor
@@ -174,7 +173,7 @@ func CheckButtonCallUp() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
+					newOrder := Order{lastFloor, myDirection, i, 1, false, true, Up, Down, Inside}
 					go sendOrder(newOrder)
 				}
 			}
@@ -196,7 +195,7 @@ func CheckButtonCallDown() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
+					newOrder := Order{lastFloor, myDirection, i, 0, false, true, Up, Down, Inside}
 					go sendOrder(newOrder)
 				}
 			}
@@ -246,14 +245,14 @@ func DoorControl() {
 				Elev_set_door_open_lamp(1)
 				timer.Reset(Second*3)
 				if Elev_get_floor_sensor_signal() == lastFloor {
-					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false, Up, Down, Inside}
+					deleteOrder := Order{lastFloor, myDirection, lastFloor, myDirection, true, false, Up, Down, Inside}
 					go sendOrder(deleteOrder)
 				}
 				
 			case <- timer.C:
 				Elev_set_door_open_lamp(0)
 				doorOpen = false
-				setDirection()
+				go setDirection()
 		}
 	}
 }
@@ -262,10 +261,21 @@ func DoorControl() {
 
 
 func setDirection(){
-
+	
 	if (EmptyQueue()) {
 		myDirection = -1
 		
+	} else if GetOrder(2, lastFloor) != 2 {
+		if myDirection == 1 && !CheckOrdersAboveFloor(lastFloor) {
+			myDirection = 0
+			println("åpner dør fra setDirection. myDir=", myDirection)
+			openDoor <- true
+			
+		} else if myDirection == 0 && !CheckOrdersUnderFloor(lastFloor) {
+			myDirection = 1
+			println("Åpner dør fra SetDirection. myDir=", myDirection)
+			openDoor <- true
+		}
 	} else {
 		if (myDirection == 0) && !(CheckOrdersUnderFloor(lastFloor)) {
 			myDirection = 1
@@ -321,7 +331,7 @@ func ReceiveMessage() {
 			} else {
 				gotMessage <- IP
 			}
-	
+			
 			Elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 			
 		}
 		Sleep(1*Millisecond)
@@ -353,11 +363,10 @@ func receiveOrder(receivedOrder Order) {
 		}
 	}
 	
-	
 	if (myDirection == -1 && myFloor == receivedOrder.Floor) || (doorOpen && myFloor == receivedOrder.Floor) {
 		openDoor <- true
 	
-	} else if true {//GetCost(myFloor, myDirection, receivedOrder.Floor, receivedOrder.Direction) == 1 {
+	} else if GetCost(lastFloor, myDirection, receivedOrder.Floor, receivedOrder.Direction) == 1 {
 		if EmptyQueue() {
 			UpdateMyOrders(receivedOrder)
 			setDirection()
@@ -394,7 +403,7 @@ func sendOrder(order Order) {
 // go fra main. sender hvert sekund oppdatering på floor og direction
 func SendUpdateMessage() {
 	for {
-		order := Order{myFloor, myDirection, -1, -1, false, false, Up, Down, Inside}
+		order := Order{lastFloor, myDirection, -1, -1, false, false, Up, Down, Inside}
 		b, err := json.Marshal(order)
 		
 		if (err != nil) {
@@ -425,11 +434,11 @@ func setMessageTimer(address string) {
 		case <- timer.C:
 			for i:=0; i<N_FLOORS; i++ {
 				if (Elevators[address].Up)[i] {
-					order := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
+					order := Order{lastFloor, myDirection, i, 1, false, true, Up, Down, Inside}
 					go sendOrder(order)
 				}
 				if (Elevators[address].Down)[i] {
-					order := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
+					order := Order{lastFloor, myDirection, i, 0, false, true, Up, Down, Inside}
 					go sendOrder(order)
 				}	
 			}

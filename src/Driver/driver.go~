@@ -243,8 +243,8 @@ func Elev_set_button_lamp(button elev_button_type_t, floor int, value int) {
 	if floor >= N_FLOORS {
 		Println("Floor variable is too high\n")
 		return }
-	if (button == BUTTON_CALL_UP && floor == N_FLOORS-1) {
-		println("lampe 1")	
+	if (button == BUTTON_CALL_UP && floor == N_FLOORS-1) {	
+		Println(button, floor)
 		Println("Unvalid button call or floor")
 		return }
 	if (button == BUTTON_CALL_DOWN && floor == 0) {

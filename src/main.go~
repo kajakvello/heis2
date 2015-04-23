@@ -7,8 +7,11 @@ import(
 
 
 //TODO: 
-// - Fikse kostfunksjon
-// - Gjøre slik at de kan dra i heisen
+
+// - Bug hvis bestilling begge veier. Kun en blir håndtert. Skjer ikke alltid, prøv 1000 ganger. 
+
+// - Fiks så man kan nappe strømmen til motor
+// - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt
 
 
 
@@ -19,7 +22,7 @@ func main() {
 	//Initialiser heis
 	Init()
 	
-	
+
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()
 	go CheckButtonCommand()
@@ -42,6 +45,7 @@ func main() {
 		Elev_set_motor_direction(0)
 		break
 	} 
+	
 }
 
 

@@ -7,8 +7,11 @@ import(
 
 
 //TODO: 
-// - Fikse kostfunksjon
-// - Gjøre slik at de kan dra i heisen
+
+// - Heisene regner av og til ut forskjellig cost på samme heis. Fml.
+
+// - Fiks så man kan nappe strømmen til motor
+// - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt
 
 
 
@@ -19,7 +22,7 @@ func main() {
 	//Initialiser heis
 	Init()
 	
-	
+
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()
 	go CheckButtonCommand()
@@ -29,7 +32,7 @@ func main() {
 
 	
 	go ReceiveMessage()
-	//go SendUpdateMessage()
+	go SendUpdateMessage()
 	
 	//go PrintStatus()
 	
@@ -42,6 +45,7 @@ func main() {
 		Elev_set_motor_direction(0)
 		break
 	} 
+	
 }
 
 
