@@ -7,7 +7,7 @@ import(
 
 
 //TODO: 
-// - Lage kostfunksjon
+// - Fikse kostfunksjon
 // - Gjøre slik at de kan dra i heisen
 
 
@@ -19,7 +19,7 @@ func main() {
 	//Initialiser heis
 	Init()
 	
-	
+	/*
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()
 	go CheckButtonCommand()
@@ -30,7 +30,7 @@ func main() {
 	
 	go ReceiveMessage()
 	go SendUpdateMessage()
-	
+	*/
 
 	s := make(chan int)
 	go Stop(s)
@@ -40,6 +40,7 @@ func main() {
 		Elev_set_motor_direction(0)
 		break
 	} 
+	
 }
 
 

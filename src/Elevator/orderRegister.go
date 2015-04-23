@@ -33,22 +33,46 @@ var Down [N_FLOORS]bool
 
 
 
+type ElevStatus struct{
+	LastFloor int
+	Direction int
+	Up [N_FLOORS]bool
+	Down [N_FLOORS]bool
+	Inside [N_FLOORS]bool
+}
+
+var Elevators = make(map[string]ElevStatus)
+var MyAddress string
+
+
+
 
 
 // Update my orders
-func UpdateMyOrders(receivedOrder Order) {
+func UpdateMyOrders(receivedOrder Order, IP string) {
+
 
 	if receivedOrder.OrderHandled {
 		
-		Inside[receivedOrder.Floor] = false
+		if IP == MyAddress {
+			Inside[receivedOrder.Floor] = false
+			Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
+		}
+		
 		Up[receivedOrder.Floor] = false
 		Down[receivedOrder.Floor] = false
 		
-		Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
-
+	} else if receivedOrder.UpdateOrder && IP != MyAddress {
+		
+		if receivedOrder.Direction == 0 {
+			Down[receivedOrder.Floor] = false
+			
+		} else if receivedOrder.Direction == 1 {
+			Up[receivedOrder.Floor] = false
+		}
 		
 	} else if receivedOrder.NewOrder {
-	
+		
 		if receivedOrder.Direction == 0 {
 			Down[receivedOrder.Floor] = true
 			
@@ -112,18 +136,25 @@ func DeleteAllOrders() {
 
 
 // Returns true if the elevator should take an order from "floor". If it exists an order in the same direction as the elevator is headed.
-func GetOrder(direction int, floor int) bool {
+func GetOrder(direction int, floor int) (bool, string) {
 	
 	if Inside[floor] {
-		return true
+		return true, MyAddress
 	}
 	if Up[floor] && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
-		return true
+		return true, MyAddress
 	}
 	if Down[floor] && (direction == 0 || direction == -1 || floor == N_FLOORS-1 || !CheckOrdersAboveFloor(floor)) {
-		return true
+		return true, MyAddress
 	}
-	return false
+
+	for IP, val := range Elevators {
+		if ((val.Up)[floor] && direction == 1) || ((val.Down)[floor] && direction == 0) {
+			return true, IP
+		}
+	}
+
+	return false, ""
 }
 
 
@@ -161,6 +192,7 @@ func EmptyQueue() bool {
 	}
 	return true
 }
+
 
 
 

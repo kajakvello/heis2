@@ -21,22 +21,10 @@ var receive_ch = make(chan Udp_message)
 var send_ch = make(chan Udp_message)
 
 
-
-type ElevStatus struct{
-	LastFloor int
-	Direction int
-	Up [N_FLOORS]bool
-	Down [N_FLOORS]bool
-	Inside [N_FLOORS]bool
-}
-
-
 var myFloor = -1
 var lastFloor = 0
 var myDirection = -1	// -1 = står i ro, 1 = opp, 0 = ned 
 var doorOpen = false
-var myAddress string
-var elevators = make(map[string]ElevStatus)
 
 
 
@@ -58,7 +46,7 @@ func Init() {
 	for Elev_get_floor_sensor_signal() != 0 {
 		Elev_set_motor_direction(-300)
 	}
-	Elev_set_motor_direction(50)
+	Elev_set_motor_direction(100)
 	Sleep(2000*Microsecond)
 	Elev_set_motor_direction(0)
 	Elev_set_floor_indicator(0)	
@@ -73,7 +61,7 @@ func Init() {
 			if ipnet.IP.To4() != nil {
 				ip := ipnet.IP.String()
 				splitip := Split(ip, ".")
-				myAddress = splitip[3]
+				MyAddress = splitip[3]
 			}
 		}
 	}
@@ -92,6 +80,27 @@ func RunElevator() {
 			Sleep(100*Millisecond)
 		} else {
 			if (EmptyQueue()){
+			
+				for _, val := range Elevators {
+					for i:=0; i<N_FLOORS; i++ {
+						if val.Up[i] {
+							if getCost(i, 1) == 1 {
+								newOrder := Order{myFloor, myDirection, i, 1, false, true, true, Up, Down, Inside}
+								sendOrder(newOrder)
+							}
+						}
+						if val.Down[i] {
+							if getCost(i, 0) == 1 {
+								newOrder := Order{myFloor, myDirection, i, 0, false, true, true, Up, Down, Inside}
+								sendOrder(newOrder)
+							}
+						}
+					}
+				}
+				Sleep(10*Millisecond)
+			}
+			
+			if EmptyQueue() {
 				myDirection = -1
 			}
 
@@ -100,7 +109,7 @@ func RunElevator() {
 			} else if myDirection == 1 {
 				Elev_set_motor_direction(300)
 			}
-
+			
 			Sleep(100*Millisecond)
 		}
 	}
@@ -131,8 +140,9 @@ func UpdateFloor() {
 func floorReached(floor int) {
 	lastFloor = floor
 	Elev_set_floor_indicator(floor)
+	orderOnFloor, IP := GetOrder(myDirection, floor)
 	
-	if (GetOrder(myDirection, floor)) {		//Stops, if orders on floor
+	if (orderOnFloor) {				//Breaks and stops, if orders on floor
 		if myDirection == 1 {
 			Elev_set_motor_direction(-100)
 		} else if (myDirection == 0) {
@@ -140,7 +150,11 @@ func floorReached(floor int) {
 		}
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
-	
+		
+		if IP != MyAddress {
+			updateOrder := Order{myFloor, myDirection, floor, myDirection, false, false, true, Up, Down, Inside}
+			sendOrder(updateOrder)
+		}
 		openDoor <- true
 		
 	} else if (floor == 0) {			//Stops, so the elevator do not pass 1. floor
@@ -149,7 +163,7 @@ func floorReached(floor int) {
 		Elev_set_motor_direction(0)
 		myDirection = 1
 		
-	} else if (floor == N_FLOORS-1) {			//Stops, so the elevator do not pass 4. floor
+	} else if (floor == N_FLOORS-1) {		//Stops, so the elevator do not pass 4. floor
 		Elev_set_motor_direction(-100)
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
@@ -171,7 +185,7 @@ func CheckButtonCallUp() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
+					newOrder := Order{myFloor, myDirection, i, 1, false, true, false, Up, Down, Inside}
 					go sendOrder(newOrder)
 				}
 			}
@@ -193,7 +207,7 @@ func CheckButtonCallDown() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
+					newOrder := Order{myFloor, myDirection, i, 0, false, true, false, Up, Down, Inside}
 					go sendOrder(newOrder)
 				}
 			}
@@ -215,12 +229,12 @@ func CheckButtonCommand() {
 				if (myDirection == -1 && myFloor == i) || (doorOpen && myFloor == i) {
 					openDoor <- true
 				} else {
-					newOrder := Order{myFloor, myDirection, i, -1, false, true, Up, Down, Inside}
+					newOrder := Order{myFloor, myDirection, i, -1, false, true, false, Up, Down, Inside}
 					if EmptyQueue() {
-						UpdateMyOrders(newOrder)
+						UpdateMyOrders(newOrder, "")
 						setDirection()
 					} else {
-						UpdateMyOrders(newOrder)
+						UpdateMyOrders(newOrder, "")
 					}
 				}
 			}
@@ -234,7 +248,7 @@ func CheckButtonCommand() {
 
 func DoorControl() {
 
-	timer := NewTimer(Hour*3)
+	timer := NewTimer(3*Hour)
 	for{
 	
 		select {
@@ -243,7 +257,7 @@ func DoorControl() {
 				Elev_set_door_open_lamp(1)
 				timer.Reset(Second*3)
 				if Elev_get_floor_sensor_signal() == lastFloor {
-					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false, Up, Down, Inside}
+					deleteOrder := Order{myFloor, myDirection, myFloor, -1, true, false, false, Up, Down, Inside}
 					go sendOrder(deleteOrder)
 				}
 				
@@ -300,7 +314,7 @@ func getCost(orderFloor int, orderDirection int) int {
 	}
 	
 	//Check if other elevator got lower cost:
-	for key, val := range elevators {
+	for IP, val := range Elevators {
 		
 		elevCost := int(Abs(float64(orderFloor - val.LastFloor))*3)
 		
@@ -316,12 +330,12 @@ func getCost(orderFloor int, orderDirection int) int {
 		if elevCost < myCost {
 			return 0
 		} else if elevCost == myCost {
-			equalCost = append(equalCost, key)
+			equalCost = append(equalCost, IP)
 		}
 	}
 	
 	if len(equalCost) != 0 {
-		myAddr, _ := strconv.Atoi(myAddress)
+		myAddr, _ := strconv.Atoi(MyAddress)
 		for i:=0; i<len(equalCost); i++ {
 			elevAddr, _ := strconv.Atoi(equalCost[i])
 			if elevAddr < myAddr {
@@ -331,7 +345,7 @@ func getCost(orderFloor int, orderDirection int) int {
 		}
 	}
 	Sleep(Millisecond*5)
-	println("Got it!! Fra IP: ", myAddress)
+	println("Got it!! Fra IP: ", MyAddress)
 	return 1
 
 }
@@ -357,15 +371,15 @@ func ReceiveMessage() {
 		}
 
 	
-		if receivedOrder.NewOrder || receivedOrder.OrderHandled {
-			receiveOrder(receivedOrder)
+		if receivedOrder.NewOrder || receivedOrder.OrderHandled || receivedOrder.UpdateOrder {
+			receiveOrder(receivedOrder, IP)
 		}
 	
-		if IP != myAddress {
+		if IP != MyAddress {
 		
 			newElevator := true	
-			for key,_ := range elevators {
-				if key == IP {
+			for IP,_ := range Elevators {
+				if IP == IP {
 					newElevator = false
 				}
 			}
@@ -376,7 +390,7 @@ func ReceiveMessage() {
 				gotMessage <- IP
 			}
 	
-			elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 			
+			Elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, Direction: receivedOrder.MyDirection, Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside} 			
 		}
 		Sleep(Millisecond*1)
 	}
@@ -388,35 +402,35 @@ func ReceiveMessage() {
 func getIP(address string) string {
 	splitaddr := Split(address, ".")
 	splitip := Split(splitaddr[3], ":")
-	myAddress := splitip[0]
-	return myAddress
+	MyAddress := splitip[0]
+	return MyAddress
 }
 
 
 
 
 
-func setMessageTimer(address string) {
+func setMessageTimer(IP string) {
 	
-	timer := NewTimer(3*Hour)
+	timer := NewTimer(3*Hour)			//TODO: fikse timer?
 	for {
 		select {
 		case <- timer.C:
 			for i:=0; i<N_FLOORS; i++ {
-				if (elevators[address].Up)[i] {
-					order := Order{myFloor, myDirection, i, 1, false, true, Up, Down, Inside}
+				if (Elevators[IP].Up)[i] {
+					order := Order{myFloor, myDirection, i, 1, false, true, false, Up, Down, Inside}
 					go sendOrder(order)
 				}
-				if (elevators[address].Down)[i] {
-					order := Order{myFloor, myDirection, i, 0, false, true, Up, Down, Inside}
+				if (Elevators[IP].Down)[i] {
+					order := Order{myFloor, myDirection, i, 0, false, true, false, Up, Down, Inside}
 					go sendOrder(order)
 				}	
 			}
-			delete (elevators, address)
+			delete (Elevators, IP)
 			return
 			
 		case receivedAddress := <- gotMessage:
-			if receivedAddress == address {
+			if receivedAddress == IP {
 				timer.Reset(3*Second)
 			}
 		}
@@ -430,12 +444,17 @@ func setMessageTimer(address string) {
 
 
 //Receives orders from other elevators
-func receiveOrder(receivedOrder Order) {
+func receiveOrder(receivedOrder Order, IP string) {
 	
 	SetButtonLight(receivedOrder)
 	
 	if receivedOrder.OrderHandled {
-		UpdateMyOrders(receivedOrder)
+		UpdateMyOrders(receivedOrder, IP)
+		return
+	}
+
+	if receivedOrder.UpdateOrder && IP != MyAddress {
+		UpdateMyOrders(receivedOrder, IP)
 		return
 	}
 	
@@ -444,10 +463,10 @@ func receiveOrder(receivedOrder Order) {
 		
 	} else if getCost(receivedOrder.Floor, receivedOrder.Direction) == 1 {
 		if EmptyQueue() {
-			UpdateMyOrders(receivedOrder)
+			UpdateMyOrders(receivedOrder, "")
 			setDirection()
 		} else {
-			UpdateMyOrders(receivedOrder)
+			UpdateMyOrders(receivedOrder, "")
 		}
 	}
 }
@@ -476,7 +495,7 @@ func sendOrder(order Order) {
 // go fra main. sender hvert sekund oppdatering på floor og direction
 func SendUpdateMessage() {
 	for {
-		order := Order{myFloor, myDirection, -1, -1, false, false, Up, Down, Inside}
+		order := Order{myFloor, myDirection, -1, -1, false, false, false, Up, Down, Inside}
 		b, err := json.Marshal(order)
 		
 		if (err != nil) {
@@ -505,6 +524,7 @@ func Stop(ch chan int) {
 		Sleep(100*Millisecond)
 	}
 }
+
 
 
 

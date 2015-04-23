@@ -20,6 +20,7 @@ type Order struct {
 	Direction int 		// 1 = UP, 0 = DOWN, -1 = INSIDE
 	OrderHandled bool 
 	NewOrder bool
+	UpdateOrder bool
 	//My orders:
 	Up [N_FLOORS]bool
 	Down [N_FLOORS]bool
