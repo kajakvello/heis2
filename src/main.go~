@@ -7,7 +7,7 @@ import(
 
 
 //TODO: 
-// - Lage kostfunksjon
+// - Fikse kostfunksjon
 // - Gjøre slik at de kan dra i heisen
 
 
@@ -30,6 +30,8 @@ func main() {
 	
 	go ReceiveMessage()
 	go SendUpdateMessage()
+	
+	//go PrintStatus()
 	
 
 	s := make(chan int)

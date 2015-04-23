@@ -29,7 +29,9 @@ func main() {
 
 	
 	go ReceiveMessage()
-	go SendUpdateMessage()
+	//go SendUpdateMessage()
+	
+	//go PrintStatus()
 	
 
 	s := make(chan int)

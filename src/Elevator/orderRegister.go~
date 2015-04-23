@@ -38,14 +38,14 @@ var Down [N_FLOORS]bool
 // Update my orders
 func UpdateMyOrders(receivedOrder Order) {
 
-	if receivedOrder.OrderHandledAtFloor {
+	if receivedOrder.OrderHandled {
 		
+		if receivedOrder.Direction == 1 {
+			Up[receivedOrder.Floor] = false
+		} else if receivedOrder.Direction == 0 {
+			Down[receivedOrder.Floor] = false
+		}
 		Inside[receivedOrder.Floor] = false
-		Up[receivedOrder.Floor] = false
-		Down[receivedOrder.Floor] = false
-		
-		Elev_set_button_lamp(BUTTON_COMMAND, receivedOrder.Floor, 0)
-
 		
 	} else if receivedOrder.NewOrder {
 	
@@ -70,6 +70,8 @@ func UpdateMyOrders(receivedOrder Order) {
 }
 
 
+
+
 func SetButtonLight(order Order) {
 	
 	if order.NewOrder && order.Direction == 0 {
@@ -78,11 +80,15 @@ func SetButtonLight(order Order) {
 	} else if order.NewOrder && order.Direction == 1 {
 		Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 1)
 		
-	} else if order.OrderHandledAtFloor {
-		if order.Floor < N_FLOORS-1 {
+	} else if order.OrderHandled {
+		
+		println("sletter lys")
+		
+		Elev_set_button_lamp(BUTTON_COMMAND, order.Floor, 0)
+		
+		if order.Direction == 1 {
 			Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 0)
-		}
-		if order.Floor > 0 {
+		} else if order.Direction == 0 {
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, order.Floor, 0)
 		}
 	}
@@ -112,18 +118,18 @@ func DeleteAllOrders() {
 
 
 // Returns true if the elevator should take an order from "floor". If it exists an order in the same direction as the elevator is headed.
-func GetOrder(direction int, floor int) bool {
+func GetOrder(direction int, floor int) (bool, int) {
 	
 	if Inside[floor] {
-		return true
+		return true, -1
 	}
 	if Up[floor] && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
-		return true
+		return true, 1
 	}
 	if Down[floor] && (direction == 0 || direction == -1 || floor == N_FLOORS-1 || !CheckOrdersAboveFloor(floor)) {
-		return true
+		return true, 0
 	}
-	return false
+	return false, 2
 }
 
 
