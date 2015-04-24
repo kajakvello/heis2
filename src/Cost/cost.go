@@ -9,14 +9,17 @@ import (
 type ElevStatus struct{
 	LastFloor int
 	Direction int
+	DoorOpen bool
 	Up [N_FLOORS]bool
 	Down [N_FLOORS]bool
 	Inside [N_FLOORS]bool
+	Defekt bool
 }
 
-
 var Elevators = make(map[string]ElevStatus)
-var MyAddress string
+
+
+
 
 
 func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int, up, down, inside [N_FLOORS]bool) int {
@@ -82,6 +85,7 @@ func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int, up
 func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, down, inside [N_FLOORS]bool) int {
 	cost := 0
 	
+	
 	if orderFloor > myFloor {
 		if myDirection == -1 {
 			cost += calculateCost(false, false, orderFloor, myFloor, 1, up, down, inside)
@@ -126,23 +130,25 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, do
 
 //TODO: Gange opp cost med 1000 og legge til IP, slik at cost aldri er lik
 //Nå beregnes costen for mange ganger på høyest IP (for some reason), så flere heiser tar samme best.
-func GetCost(myFloor, myDirection, orderFloor, orderDirection int) int {
+func GetCost(myFloor, myDirection, orderFloor, orderDirection int, myAddress string) int {
 	
 	//Find my cost:
 	myCost := selectCostCase(myFloor, orderFloor, myDirection, orderDirection, Up, Down, Inside)
 	
-	myIP, _ := strconv.Atoi(MyAddress)
+	myIP, _ := strconv.Atoi(myAddress)
 	myCost = (myCost*1000)+myIP
 	
 	//Check if other elevator got lower cost:
 	for IP, elev := range Elevators {
-		elevCost := selectCostCase(elev.LastFloor, orderFloor, elev.Direction, orderDirection, elev.Up, elev.Down, elev.Inside)
+		if elev.Defekt == false {
+			elevCost := selectCostCase(elev.LastFloor, orderFloor, elev.Direction, orderDirection, elev.Up, elev.Down, elev.Inside)
 		
-		elevIP, _ := strconv.Atoi(IP)
-		elevCost = (elevCost*1000)+ elevIP
+			elevIP, _ := strconv.Atoi(IP)
+			elevCost = (elevCost*1000)+ elevIP
 		
-		if elevCost < myCost {
-			return 0
+			if elevCost < myCost {
+				return 0
+			}
 		}
 	}
 

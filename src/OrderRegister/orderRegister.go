@@ -3,6 +3,7 @@ package Elevator
 import (
 	."./../Driver"
 	."./../Udp"
+	"encoding/json"
 )
 
 
@@ -31,6 +32,20 @@ var Up [N_FLOORS]bool
 var Down [N_FLOORS]bool
 
 
+var Receive_ch = make(chan Udp_message)
+var Send_ch = make(chan Udp_message)
+
+var MyFloor = -1
+var LastFloor = 0
+var MyDirection = -1	// -1 = står i ro, 1 = opp, 0 = ned 
+var MyAddress string
+var Defekt bool
+
+var DoorOpen = false
+var OpenDoor = make(chan bool)
+var GotMessage = make(chan string)
+var Alive = make(chan string)
+
 
 
 
@@ -39,7 +54,6 @@ var Down [N_FLOORS]bool
 func UpdateMyOrders(receivedOrder Order) {
 
 	if receivedOrder.OrderHandled {
-		
 		if receivedOrder.Direction == 1  || receivedOrder.Floor == 0{
 			Up[receivedOrder.Floor] = false
 		} else if receivedOrder.Direction == 0 || receivedOrder.Floor == N_FLOORS-1 {
@@ -99,10 +113,10 @@ func SetButtonLight(order Order) {
 
 //Funker fra init
 func DeleteAllOrders() {
-
+	
 	for j:=0; j<N_FLOORS; j++ {
 		Inside[j] = false
-	}
+	} 
 
 	for j:=0; j<N_FLOORS; j++ {
 		Up[j] = false
@@ -122,6 +136,9 @@ func GetOrder(direction int, floor int) int {
 	if Inside[floor] {
 		return -1
 	}
+	if Up[floor] && Down[floor] {
+		return direction
+	}
 	if Up[floor] && (direction == 1 || direction == -1 || floor == 0 || !CheckOrdersUnderFloor(floor)) {
 		return 1
 	}
@@ -132,7 +149,7 @@ func GetOrder(direction int, floor int) int {
 		return 1
 	} else if (direction == 2) && (Down[floor]) {
 		return 0
-	} 
+	}
 	
 	return 2
 }
@@ -175,6 +192,55 @@ func EmptyQueue() bool {
 
 
 
+
+
+
+func SendOrder(order Order) {
+	b, err := json.Marshal(order)
+	
+	if (err != nil) {
+		println("Send Order Error: ", err)
+	}
+	
+	var message Udp_message
+	message.Raddr = "broadcast"
+	message.Data = b
+	message.Length = 1024
+	
+	Send_ch <- message
+}
+
+
+
+
+func SetDirectionToOrder() {
+	
+	if (EmptyQueue()) {
+		MyDirection = -1
+		
+	} else if GetOrder(2, LastFloor) != 2 {
+		if MyDirection == 1 && !CheckOrdersAboveFloor(LastFloor) {
+			MyDirection = 0
+			OpenDoor <- true
+			
+		} else if MyDirection == 0 && !CheckOrdersUnderFloor(LastFloor) {
+			MyDirection = 1
+			OpenDoor <- true
+		}
+	} else {
+		if (MyDirection == 0) && !(CheckOrdersUnderFloor(LastFloor)) {
+			MyDirection = 1
+		} else if (MyDirection == 1) && !(CheckOrdersAboveFloor(LastFloor)) {
+			MyDirection = 0
+		} else if MyDirection == -1 {
+			if CheckOrdersAboveFloor(LastFloor) {
+				MyDirection = 1
+			} else if CheckOrdersUnderFloor(LastFloor) {
+				MyDirection = 0
+			}
+		}
+	}
+}
 
 
 

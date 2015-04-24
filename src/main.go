@@ -3,16 +3,15 @@ package main
 import(
 	."./Elevator"
 	."./Driver"
+	."./Timer"
 )
 
 
 //TODO: 
 
-// - To knapper på likt -> heisen tar begge bestillinger samtidig
 
 // - Fiks så man kan nappe strømmen til motor
 // - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt
-
 
 
 
@@ -21,6 +20,7 @@ func main() {
 	
 	//Initialiser heis
 	Init()
+	
 	
 
 	go CheckButtonCallUp()
@@ -34,7 +34,7 @@ func main() {
 	go ReceiveMessage()
 	go SendUpdateMessage()
 	
-	//go PrintStatus()
+	go PrintStatus()
 	
 
 	s := make(chan int)
@@ -45,6 +45,7 @@ func main() {
 		Elev_set_motor_direction(0)
 		break
 	} 
+	
 	
 }
 
