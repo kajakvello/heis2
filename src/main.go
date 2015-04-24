@@ -8,7 +8,7 @@ import(
 
 //TODO: 
 
-// - Heisene regner av og til ut forskjellig cost på samme heis. Fml.
+// - To knapper på likt -> heisen tar begge bestillinger samtidig
 
 // - Fiks så man kan nappe strømmen til motor
 // - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt

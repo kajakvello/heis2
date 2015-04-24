@@ -416,7 +416,7 @@ func SendUpdateMessage() {
 		message.Length = 1024
 		
 		send_ch <- message
-		Sleep(1*Second)
+		Sleep(100*Millisecond)
 	}
 	
 }

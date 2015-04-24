@@ -8,7 +8,7 @@ import(
 
 //TODO: 
 
-// - Bug hvis bestilling begge veier. Kun en blir håndtert. Skjer ikke alltid, prøv 1000 ganger. 
+// - Heisene regner av og til ut forskjellig cost på samme heis. Fml.
 
 // - Fiks så man kan nappe strømmen til motor
 // - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt

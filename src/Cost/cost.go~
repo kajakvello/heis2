@@ -19,8 +19,8 @@ var Elevators = make(map[string]ElevStatus)
 var MyAddress string
 
 
-func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int) int {
-
+func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int, up, down, inside [N_FLOORS]bool) int {
+	
 	cost := 0
 	highestOrder := -1
 	lowestOrder := N_FLOORS
@@ -28,22 +28,22 @@ func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int) in
 	cost += highestFloor - lowestFloor
 	
 	for i:=lowestFloor; i<highestFloor; i++ {
-		if pos == 1 && (Up[i] || Inside[i]) {
+		if pos == 1 && (up[i] || inside[i]) {
 			cost += 4
-		} else if pos == 0 && (Down[i] || Inside[i]) {
+		} else if pos == 0 && (down[i] || inside[i]) {
 			cost += 4
 		}
 	}
 	
 	if loopUp {
 		for i:=highestFloor; i<N_FLOORS; i++ {
-			if Up[i] || Inside[i] {
+			if up[i] || inside[i] {
 				cost += 4
 				if i > highestOrder {
 					highestOrder = i
 				}
 			}
-			if Down[i] {
+			if down[i] {
 				cost += 4
 				if i > highestOrder {
 					highestOrder = i
@@ -56,13 +56,13 @@ func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int) in
 	}
 	if loopDown {
 		for i:=0; i<lowestFloor; i++ {
-			if Up[i] {
+			if up[i] {
 				cost += 4
 				if i < lowestOrder {
 					lowestOrder = i
 				}
 			}
-			if Down[i] || Inside[i] {
+			if down[i] || inside[i] {
 				cost += 4
 				if i < lowestOrder {
 					lowestOrder = i
@@ -79,44 +79,43 @@ func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int) in
 
 
 
-func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int) int {
+func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, down, inside [N_FLOORS]bool) int {
 	cost := 0
 	
 	if orderFloor > myFloor {
 		if myDirection == -1 {
-			cost += calculateCost(false, false, orderFloor, myFloor, 1)
+			cost += calculateCost(false, false, orderFloor, myFloor, 1, up, down, inside)
 		} else if orderDirection == 1 {
 			if myDirection == 1 {
-				cost += calculateCost(false, false, orderFloor, myFloor, 1)
+				cost += calculateCost(false, false, orderFloor, myFloor, 1, up, down, inside)
 			} else if myDirection == 0 {
-				cost += calculateCost(false, true, orderFloor, myFloor, 1) 
+				cost += calculateCost(false, true, orderFloor, myFloor, 1, up, down, inside) 
 			}
 		} else if orderDirection == 0 {
 			if myDirection == 1 {
-				cost += calculateCost(true, false, orderFloor, myFloor, 1)
+				cost += calculateCost(true, false, orderFloor, myFloor, 1, up, down, inside)
 			} else if myDirection == 0 {
-				cost += calculateCost(true, true, orderFloor, myFloor, 1) 
+				cost += calculateCost(true, true, orderFloor, myFloor, 1, up, down, inside) 
 			}
 		}
 	
 	} else if orderFloor < myFloor {
 		if myDirection == -1 {
-			cost += calculateCost(false, false, myFloor, orderFloor, 0)
+			cost += calculateCost(false, false, myFloor, orderFloor, 0, up, down, inside)
 		} else if orderDirection == 1 {
 			if myDirection == 1 {
-				cost += calculateCost(true, true, myFloor, orderFloor, 0)
+				cost += calculateCost(true, true, myFloor, orderFloor, 0, up, down, inside)
 			} else if myDirection == 0 {
-				cost += calculateCost(false, true, myFloor, orderFloor, 0) 
+				cost += calculateCost(false, true, myFloor, orderFloor, 0, up, down, inside) 
 			}
 		} else if orderDirection == 0 {
 			if myDirection == 1 {
-				cost += calculateCost(true, false, myFloor, orderFloor, 0)
+				cost += calculateCost(true, false, myFloor, orderFloor, 0, up, down, inside)
 			} else if myDirection == 0 {
-				cost += calculateCost(false, false, myFloor, orderFloor, 0) 
+				cost += calculateCost(false, false, myFloor, orderFloor, 0, up, down, inside) 
 			}
 		}
 	}
-	println("MyCost =", cost, " for order in Direction ", orderDirection)
 	return cost
 }
 
@@ -130,15 +129,16 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int) int {
 func GetCost(myFloor, myDirection, orderFloor, orderDirection int) int {
 	
 	//Find my cost:
-	myCost := selectCostCase(myFloor, orderFloor, myDirection, orderDirection)
+	println("CALCULATING MYCOST")
+	myCost := selectCostCase(myFloor, orderFloor, myDirection, orderDirection, Up, Down, Inside)
 	
 	myIP, _ := strconv.Atoi(MyAddress)
 	myCost = (myCost*1000)+myIP
 	
 	//Check if other elevator got lower cost:
-	for IP, val := range Elevators {
-	
-		elevCost := selectCostCase(val.LastFloor, orderFloor, val.Direction, orderDirection)
+	for IP, elev := range Elevators {
+		println("CALCULATING ELEVCOST")
+		elevCost := selectCostCase(elev.LastFloor, orderFloor, elev.Direction, orderDirection, elev.Up, elev.Down, elev.Inside)
 		
 		elevIP, _ := strconv.Atoi(IP)
 		elevCost = (elevCost*1000)+ elevIP

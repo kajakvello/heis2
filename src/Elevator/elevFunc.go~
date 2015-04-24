@@ -367,7 +367,6 @@ func receiveOrder(receivedOrder Order) {
 		openDoor <- true
 	
 	} else if GetCost(lastFloor, myDirection, receivedOrder.Floor, receivedOrder.Direction) == 1 {
-		println("Lavest cost!")
 		if EmptyQueue() {
 			UpdateMyOrders(receivedOrder)
 			setDirection()
@@ -417,7 +416,7 @@ func SendUpdateMessage() {
 		message.Length = 1024
 		
 		send_ch <- message
-		Sleep(1*Second)
+		Sleep(200*Millisecond)
 	}
 	
 }
