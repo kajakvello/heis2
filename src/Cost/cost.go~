@@ -9,7 +9,6 @@ import (
 type ElevStatus struct{
 	LastFloor int
 	Direction int
-	OpenDoor bool
 	Up [N_FLOORS]bool
 	Down [N_FLOORS]bool
 	Inside [N_FLOORS]bool

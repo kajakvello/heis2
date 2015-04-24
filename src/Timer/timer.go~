@@ -2,11 +2,11 @@ package Timer
 
 
 import (
-	."./../Udp"
 	."./../Driver"
 	."./../Cost"
 	."./../OrderRegister"
 	."time"
+	//."fmt"
 	
 )
 
@@ -17,36 +17,31 @@ import (
 func DoorControl() {
 
 	timer := NewTimer(Hour*3)
+	orderDir := 2
 	for {
 	
 		select {
-		case <- OpenDoor:
-			println("åpner dør")
+		case orderDir = <- OpenDoor:
 			DoorOpen = true
 			Elev_set_door_open_lamp(1)
 			timer.Reset(Second*3)
-			//delete light, but not order
 			if Elev_get_floor_sensor_signal() == LastFloor {
-				deleteLight := Order{LastFloor, MyDirection, LastFloor, MyDirection, true, false, DoorOpen, Up, Down, Inside}
-				go SendOrder(deleteLight)
+				deleteOrder := Order{LastFloor, MyDirection, LastFloor, orderDir, true, false, DoorOpen, Up, Down, Inside}
+				SendOrder(deleteOrder)
 			}
 			
 		case <- timer.C:
-			println("slukker lys")
 			Elev_set_door_open_lamp(0)
 			DoorOpen = false
-			//delete order
-			if Elev_get_floor_sensor_signal() == LastFloor {
-				deleteOrder := Order{LastFloor, MyDirection, LastFloor, MyDirection, true, false, DoorOpen, Up, Down, Inside}
-				SendOrder(deleteOrder)	
+			if orderDir == 1{
+				orderDir = 0
+			} else if orderDir == 0 {
+				orderDir = 1
 			}
-			go SetDirection()
+			go SetDirectionToOrder(orderDir)
 		}
 	}
 }
-
-
-
 
 
 
@@ -62,11 +57,11 @@ func SetMessageTimer(address string) {
 			
 			for i:=0; i<N_FLOORS; i++ {
 				if (Elevators[address].Up)[i] {
-					order := Order{LastFloor, MyDirection, i, 1, false, true, false, Up, Down, Inside}
+					order := Order{LastFloor, MyDirection, i, 1, false, true, DoorOpen, Up, Down, Inside}
 					go SendOrder(order)
 				}
 				if (Elevators[address].Down)[i] {
-					order := Order{LastFloor, MyDirection, i, 0, false, true, false, Up, Down, Inside}
+					order := Order{LastFloor, MyDirection, i, 0, false, true, DoorOpen, Up, Down, Inside}
 					go SendOrder(order)
 				}	
 			}
@@ -81,7 +76,12 @@ func SetMessageTimer(address string) {
 	}
 }
 
+func OrderTimer() {
 
+	
+
+
+}
 
 
 //Resets timer if order has been handled or if the elevator has no orders (dir == -1).
@@ -91,6 +91,7 @@ func AliveTimer(address string) {
 	timer := NewTimer(3*Hour)
 	oldUp := [N_FLOORS]bool{}
 	oldDown := [N_FLOORS]bool{}
+	oldInside := [N_FLOORS]bool{}
 	
 	for {	
 		select {
@@ -100,15 +101,16 @@ func AliveTimer(address string) {
 				temp := Elevators[IP]
 				
 				if Elevators[IP].Direction == -1 {
-					timer.Reset(5*Second)
+					timer.Reset(10*Second)
 					break
 				}
 				for i:=0; i<N_FLOORS; i++ {
-					if (oldUp[i] && !(Elevators[IP].Up)[i] || oldDown[i] && !(Elevators[IP].Down)[i]) {
-						timer.Reset(5*Second)
+					if (oldUp[i] && !(Elevators[IP].Up)[i]) || (oldDown[i] && !(Elevators[IP].Down)[i]) || (oldInside[i] && !(Elevators[IP].Inside)[i]) {
+						timer.Reset(10*Second)
 					}
 					oldUp[i] = temp.Up[i]
 					oldDown[i] = temp.Down[i]
+					oldInside[i] = temp.Inside[i]
 				}
 				temp.Defekt = false
 				Elevators[IP] = temp
@@ -121,11 +123,11 @@ func AliveTimer(address string) {
 			
 			for i:=0; i<N_FLOORS; i++ {
 				if (Elevators[address].Up)[i] {
-					order := Order{0, -1, i, 1, false, true, false, Up, Down, Inside}
+					order := Order{0, -1, i, 1, false, true, DoorOpen, Up, Down, Inside}
 					go SendOrder(order)
 				}
 				if (Elevators[address].Down)[i] {
-					order := Order{0, -1, i, 0, false, true, false, Up, Down, Inside}
+					order := Order{0, -1, i, 0, false, true, DoorOpen, Up, Down, Inside}
 					go SendOrder(order)
 				}
 				temp.Up[i] = false

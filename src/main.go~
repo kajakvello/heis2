@@ -11,15 +11,9 @@ import(
 
 
 // - Fiks så man kan nappe strømmen til motor
-// - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt
+// - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt --> NOPE
+// - Lage egen break-funksjon
 
-
-type hoho struct{
-	Floor int
-	Defekt bool
-}
-
-var Elevators = make(map[string]hoho)
 
 
 
@@ -29,7 +23,7 @@ func main() {
 	Init()
 	
 	
-/*
+
 	go CheckButtonCallUp()
 	go CheckButtonCallDown()
 	go CheckButtonCommand()
@@ -52,7 +46,7 @@ func main() {
 		Elev_set_motor_direction(0)
 		break
 	} 
-	*/
+	
 	
 }
 

@@ -10,24 +10,6 @@ import (
 
 //var Send_ch chan Udp_message
 
-type Order struct {
-
-	//My posistion:
-	MyFloor int
-	MyDirection int
-	//Order:
-	Floor int				
-	Direction int 		// 1 = UP, 0 = DOWN, -1 = INSIDE
-	OrderHandled bool 
-	NewOrder bool
-	//My orders:
-	Up [N_FLOORS]bool
-	Down [N_FLOORS]bool
-	Inside [N_FLOORS]bool
-		
-}
-
-
 
 
 
@@ -148,8 +130,6 @@ func udp_connection_reader(conn *net.UDPConn, message_size int, rcv_ch chan Udp_
 		}
 	}()
 
-
-
 	for {
 		buf := make([]byte, message_size)
 		//		fmt.Printf("udp_connection_reader: Waiting on data from UDPConn\n")
@@ -159,6 +139,8 @@ func udp_connection_reader(conn *net.UDPConn, message_size int, rcv_ch chan Udp_
 			fmt.Printf("Error: udp_connection_reader: reading\n")
 			panic(err)
 		}
+		
+	
 		rcv_ch <- Udp_message{Raddr: raddr.String(), Data: buf[:n], Length: n}
 	}
 }

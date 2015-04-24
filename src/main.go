@@ -11,7 +11,8 @@ import(
 
 
 // - Fiks så man kan nappe strømmen til motor
-// - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt
+// - Fiks så de kan drepe prossessen din, men interne ordre ikke går tapt --> NOPE
+// - Lage egen break-funksjon
 
 
 
@@ -34,7 +35,7 @@ func main() {
 	go ReceiveMessage()
 	go SendUpdateMessage()
 	
-	go PrintStatus()
+	//go PrintStatus()
 	
 
 	s := make(chan int)

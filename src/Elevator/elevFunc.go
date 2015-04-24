@@ -67,11 +67,17 @@ func Init() {
 func PrintStatus() {
 
 	for{
+		Println("UP: ", GlobalUp)
+		Println("DOWN: ", GlobalDown)	
+		
+		Sleep(2*Second)
+		/*
 		println("Direction: ", MyDirection)
 		Println("UP: ",Up)
 		Println("DOWN: ", Down)
 		Println("INSIDE: ", Inside)
-		Sleep(3*Second)
+		Sleep(2*Second)
+		*/
 	}
 }
 
@@ -134,8 +140,7 @@ func floorReached(floor int) {
 		}
 		Sleep(2000*Microsecond)
 		Elev_set_motor_direction(0)
-	
-		OpenDoor <- true
+		OpenDoor <- orderDir
 		
 	} else if (floor == 0) {				//Stops, so the elevator do not pass 1. floor
 		Elev_set_motor_direction(100)
@@ -163,9 +168,9 @@ func CheckButtonCallUp() {
 			if (Elev_get_button_signal(BUTTON_CALL_UP, i)) {
 				
 				if (MyDirection == -1 && MyFloor == i) || (DoorOpen && MyFloor == i) {
-					OpenDoor <- true
+					OpenDoor <- 1
 				} else {
-					newOrder := Order{LastFloor, MyDirection, i, 1, false, true, false, Up, Down, Inside}
+					newOrder := Order{LastFloor, MyDirection, i, 1, false, true, DoorOpen, Up, Down, Inside}
 					go SendOrder(newOrder)
 				}
 			}
@@ -185,9 +190,9 @@ func CheckButtonCallDown() {
 			if (Elev_get_button_signal(BUTTON_CALL_DOWN, i)) {
 				
 				if (MyDirection == -1 && MyFloor == i) || (DoorOpen && MyFloor == i) {
-					OpenDoor <- true
+					OpenDoor <- 0
 				} else {
-					newOrder := Order{LastFloor, MyDirection, i, 0, false, true, false, Up, Down, Inside}
+					newOrder := Order{LastFloor, MyDirection, i, 0, false, true, DoorOpen, Up, Down, Inside}
 					go SendOrder(newOrder)
 				}
 			}
@@ -207,12 +212,12 @@ func CheckButtonCommand() {
 			if (Elev_get_button_signal(BUTTON_COMMAND, i)) {
 			
 				if (MyDirection == -1 && MyFloor == i) || (DoorOpen && MyFloor == i) {
-					OpenDoor <- true
+					OpenDoor <- -1
 				} else {
-					newOrder := Order{MyFloor, MyDirection, i, -1, false, true, false, Up, Down, Inside}
+					newOrder := Order{MyFloor, MyDirection, i, -1, false, true, DoorOpen, Up, Down, Inside}
 					if EmptyQueue() {
 						UpdateMyOrders(newOrder)
-						SetDirectionToOrder()
+						SetDirectionToOrder(-1)
 					} else {
 						UpdateMyOrders(newOrder)
 					}
@@ -237,7 +242,6 @@ func ReceiveMessage() {
 		
 		IP := getIP(receivedMessage.Raddr)
 		
-		
 		var receivedOrder Order
 		err := json.Unmarshal(receivedMessage.Data[:receivedMessage.Length], &receivedOrder)
 		if (err != nil) {
@@ -246,7 +250,7 @@ func ReceiveMessage() {
 		}
 
 	
-		if receivedOrder.NewOrder || receivedOrder.OrderHandled || receivedOrder.DoorOpen {
+		if receivedOrder.NewOrder || receivedOrder.OrderHandled {
 			go receiveOrder(receivedOrder)
 			
 		} else if IP != MyAddress {
@@ -262,21 +266,24 @@ func ReceiveMessage() {
 				go SetMessageTimer(IP)
 				go AliveTimer(IP)
 				Elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, 
-					Direction: receivedOrder.MyDirection, DoorOpen: receivedOrder.DoorOpen, 
+					Direction: receivedOrder.MyDirection, 
 					Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside, 
 					Defekt: false} 
 			} else {
+			
 				GotMessage <- IP
-				Alive <- IP
+				//Alive <- IP
 				def := Elevators[IP].Defekt
 				Elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, 
 					Direction: receivedOrder.MyDirection, DoorOpen: receivedOrder.DoorOpen, 
 					Up: receivedOrder.Up, Down: receivedOrder.Down, Inside: receivedOrder.Inside, 
 					Defekt: def} 
+					
 			}
 			
-						
+					
 		}
+		
 		Sleep(1*Millisecond)
 	}
 }
@@ -289,54 +296,55 @@ func ReceiveMessage() {
 //Receives orders from all elevators
 func receiveOrder(receivedOrder Order) {
 	
-	if receivedOrder.DoorOpen {			//kun slette lys, ikke bestilling
-		go SetButtonLight(receivedOrder)
-		return
-	}
 	
-	if receivedOrder.NewOrder {
-		//sjekker om jeg er i rett etg
-		if (MyDirection == -1 && MyFloor == receivedOrder.Floor) || (DoorOpen && MyFloor == receivedOrder.Floor) {
-			UpdateMyOrders(receivedOrder)
-			OpenDoor <- true
-			return
-		} 
-
-		//sjekker om noen av de andre heisene er i rett etg
-		for _, val := range Elevators {
-			if (receivedOrder.Floor == val.LastFloor) && ((receivedOrder.Direction == val.Direction && val.DoorOpen) || val.Direction == -1) {
-				if !val.Defekt {
-					return
-				}
-			}
-		}
-	}
 	
 	go SetButtonLight(receivedOrder)
 	
 	if receivedOrder.OrderHandled {		//sletter ordre
 		UpdateMyOrders(receivedOrder)
+		UpdateGlobalOrders(receivedOrder)
 		return
+	}
+	
+	if receivedOrder.NewOrder {
+		//sjekker om jeg er i rett etg
+		if (MyFloor == receivedOrder.Floor) && (DoorOpen || MyDirection == -1 ) {
+			OpenDoor <- receivedOrder.Direction
+			return
+		} 
+
+		//sjekker om noen av de andre heisene er i rett etg
+		for _, val := range Elevators {
+			if (receivedOrder.Floor == val.LastFloor) && (val.DoorOpen || val.Direction == -1) {
+				if !val.Defekt {
+					return
+				}
+			}
+		}
 		
-	} else if receivedOrder.NewOrder {			//sjekker om bestillingen finnes fra før
-		if (receivedOrder.Direction == 1 && Up[receivedOrder.Floor]) || (receivedOrder.Direction == 0 && Down[receivedOrder.Floor]) {
+
+		//sjekker om bestillingen finnes fra før
+		if (receivedOrder.Direction == 1 && GlobalUp[receivedOrder.Floor]) || (receivedOrder.Direction == 0 && GlobalDown[receivedOrder.Floor]) {
 			return
 		}
+		/*
+		
 		for _, val := range Elevators {
 			if (val.Up)[receivedOrder.Floor] && receivedOrder.Direction == 1 {
 				return
 			} else if (val.Down)[receivedOrder.Floor] && receivedOrder.Direction == 0 {
 				return
 			}
-		}
-		
+		}*/
 	}
 	
 	
+	
+	UpdateGlobalOrders(receivedOrder)
 	if !Defekt && GetCost(LastFloor, MyDirection, receivedOrder.Floor, receivedOrder.Direction, MyAddress) == 1 {
 		if EmptyQueue() {
 			UpdateMyOrders(receivedOrder)
-			SetDirectionToOrder()
+			SetDirectionToOrder(receivedOrder.Direction)
 		} else {
 			UpdateMyOrders(receivedOrder)
 		}
@@ -362,6 +370,7 @@ func SendUpdateMessage() {
 		message.Raddr = "broadcast"
 		message.Data = b
 		message.Length = 1024
+		
 		
 		Send_ch <- message
 		Sleep(200*Millisecond)
