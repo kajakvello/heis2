@@ -40,12 +40,13 @@ var MyFloor = -1
 var LastFloor = 0
 var MyDirection = -1	// -1 = står i ro, 1 = opp, 0 = ned 
 var MyAddress string
-var Defekt bool
+var Defect bool
 
 var DoorOpen = false
 var OpenDoor = make(chan int)
 var GotMessage = make(chan string)
 var Alive = make(chan string)
+//var orderHandled = make(chan int)
 
 
 type Order struct {
@@ -65,6 +66,10 @@ type Order struct {
 	Inside [N_FLOORS]bool
 		
 }
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -109,6 +114,12 @@ func UpdateMyOrders(receivedOrder Order) {
 
 }
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 func UpdateGlobalOrders(order Order){
 
 	if order.NewOrder {
@@ -118,18 +129,23 @@ func UpdateGlobalOrders(order Order){
 			GlobalDown[order.Floor] = true
 		}
 	} else if order.OrderHandled {
-			if order.Direction == 1 {
-				GlobalUp[order.Floor] = false
-			} else if order.Direction == 0 {
-				GlobalDown[order.Floor] = false
-			}
+		if order.Direction == 1 {
+			GlobalUp[order.Floor] = false
+		} else if order.Direction == 0 {
+			GlobalDown[order.Floor] = false
 		}
+	} else {
+		println("Error in update global order")
+	}
 }
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
 
-func SetButtonLight(order Order) {
+
+
+func SetButtonLight(order Order, IP string) {
 	
 	if order.NewOrder && order.Direction == 0 {
 		Elev_set_button_lamp(BUTTON_CALL_DOWN, order.Floor, 1)
@@ -139,13 +155,16 @@ func SetButtonLight(order Order) {
 		
 	} else if order.OrderHandled {
 		
-		Elev_set_button_lamp(BUTTON_COMMAND, order.Floor, 0)
+		if IP == MyAddress {
+			Elev_set_button_lamp(BUTTON_COMMAND, order.Floor, 0)
+		}
 		
 		if (order.Direction == 1 && order.Floor != N_FLOORS-1) || (order.Floor == 0) {
 			Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 0)
 			
 		} else if (order.Direction == 0 && order.Floor != 0) || (order.Floor == N_FLOORS-1){
 			Elev_set_button_lamp(BUTTON_CALL_DOWN, order.Floor, 0)
+			
 		} else if order.Direction == -1 {
 			if MyDirection == 1 {
 				Elev_set_button_lamp(BUTTON_CALL_UP, order.Floor, 0)
@@ -158,9 +177,10 @@ func SetButtonLight(order Order) {
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
-//Funker fra init
+
 func DeleteAllOrders() {
 	
 	for j:=0; j<N_FLOORS; j++ {
@@ -176,6 +196,9 @@ func DeleteAllOrders() {
 	}
 }
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -200,6 +223,9 @@ func GetOrder(direction int, floor int) int {
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 func CheckOrdersUnderFloor(floor int) bool {
 	for i:=0; i<floor; i++ {
@@ -210,6 +236,9 @@ func CheckOrdersUnderFloor(floor int) bool {
 	return false
 }
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -224,6 +253,9 @@ func CheckOrdersAboveFloor(floor int) bool {
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 func EmptyQueue() bool {
 	for i:=0; i<N_FLOORS; i++ {
@@ -236,6 +268,7 @@ func EmptyQueue() bool {
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -254,6 +287,9 @@ func SendOrder(order Order) {
 	Send_ch <- message
 }
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 

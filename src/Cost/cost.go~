@@ -13,7 +13,7 @@ type ElevStatus struct{
 	Down [N_FLOORS]bool
 	Inside [N_FLOORS]bool
 	DoorOpen bool
-	Defekt bool
+	Defect bool
 }
 
 var Elevators = make(map[string]ElevStatus)
@@ -28,28 +28,37 @@ func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int, up
 	highestOrder := -1
 	lowestOrder := N_FLOORS
 	
-	cost += highestFloor - lowestFloor
+	if highestFloor != lowestFloor {
+		cost += highestFloor - lowestFloor
 	
-	for i:=lowestFloor; i<highestFloor; i++ {
-		if pos == 1 && (up[i] || inside[i]) {
-			cost += 4
-		} else if pos == 0 && (down[i] || inside[i]) {
-			cost += 4
+		if pos == 1 {
+			for i:=lowestFloor; i<highestFloor; i++ {
+				if up[i] || inside[i] {
+					cost += 4
+				}
+			}
+		} else if pos == 0 {
+			for i:=highestFloor; i<lowestFloor; i-- {
+				if down[i] || inside[i] {
+					cost += 4
+				}
+			}
 		}
 	}
 	
 	if loopUp {
 		for i:=highestFloor; i<N_FLOORS; i++ {
-			if up[i] || inside[i] {
+			if inside[i] {
 				cost += 4
-				if i > highestOrder {
-					highestOrder = i
+				if i > highestOrder {highestOrder = i}
+			} else {
+				if up[i] {
+					cost += 4
+					if i > highestOrder {highestOrder = i}
 				}
-			}
-			if down[i] {
-				cost += 4
-				if i > highestOrder {
-					highestOrder = i
+				if down[i] && i != highestFloor {
+					cost += 4
+					if i > highestOrder {highestOrder = i}
 				}
 			}
 		}
@@ -58,17 +67,18 @@ func calculateCost(loopUp, loopDown bool, highestFloor, lowestFloor, pos int, up
 		}
 	}
 	if loopDown {
-		for i:=0; i<lowestFloor; i++ {
-			if up[i] {
+		for i:=lowestFloor; i>=0; i-- {
+			if inside[i] {
 				cost += 4
-				if i < lowestOrder {
-					lowestOrder = i
+				if i < lowestOrder {lowestOrder = i}
+			} else {
+				if up[i] && i != lowestFloor {
+					cost += 4
+					if i < lowestOrder {lowestOrder = i}
 				}
-			}
-			if down[i] || inside[i] {
-				cost += 4
-				if i < lowestOrder {
-					lowestOrder = i
+				if down[i] {
+					cost += 4
+					if i < lowestOrder {lowestOrder = i}
 				}
 			}
 		}
@@ -86,8 +96,11 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, do
 	cost := 0
 	
 	
-	if orderFloor > myFloor {
-		if myDirection == -1 {
+	switch {
+	
+		case orderFloor > myFloor:
+		
+			if myDirection == -1 {
 			cost += calculateCost(false, false, orderFloor, myFloor, 1, up, down, inside)
 		} else if orderDirection == 1 {
 			if myDirection == 1 {
@@ -102,9 +115,10 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, do
 				cost += calculateCost(true, true, orderFloor, myFloor, 1, up, down, inside) 
 			}
 		}
-	
-	} else if orderFloor < myFloor {
-		if myDirection == -1 {
+		
+		case orderFloor < myFloor:
+		
+			if myDirection == -1 {
 			cost += calculateCost(false, false, myFloor, orderFloor, 0, up, down, inside)
 		} else if orderDirection == 1 {
 			if myDirection == 1 {
@@ -119,8 +133,21 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, do
 				cost += calculateCost(false, false, myFloor, orderFloor, 0, up, down, inside) 
 			}
 		}
+		
+		case orderFloor == myFloor:
+		
+			if myDirection == orderDirection {
+				cost += calculateCost(true, true, orderFloor, myFloor, myDirection, up, down, inside)
+			} else {
+				if myDirection == 0 {
+					cost += calculateCost(false, true, orderFloor, myFloor, 1, up, down, inside)
+				} else if myDirection == 1 {
+					cost += calculateCost(true, false, orderFloor, myFloor, 0, up, down, inside)
+				}
+			}
+	
 	}
-	println("cost = ", cost, " from IP ", MyAddress)
+
 	return cost
 }
 
@@ -137,16 +164,20 @@ func GetCost(myFloor, myDirection, orderFloor, orderDirection int, myAddress str
 	myCost := selectCostCase(myFloor, orderFloor, myDirection, orderDirection, Up, Down, Inside)
 	
 	myIP, _ := strconv.Atoi(myAddress)
-	myCost = (myCost*1000)+myIP
+	myCost = (myCost*1000) + myIP
+	
+	println("myCost = ", myCost)
 	
 	//Check if other elevator got lower cost:
 	for IP, elev := range Elevators {
-		if elev.Defekt == false {
+		if !elev.Defect {
 			elevCost := selectCostCase(elev.LastFloor, orderFloor, elev.Direction, orderDirection, elev.Up, elev.Down, elev.Inside)
 		
 			elevIP, _ := strconv.Atoi(IP)
-			elevCost = (elevCost*1000)+ elevIP
-		
+			elevCost = (elevCost*1000) + elevIP
+			
+			println("elevCost = ", elevCost)
+			
 			if elevCost < myCost {
 				return 0
 			}
