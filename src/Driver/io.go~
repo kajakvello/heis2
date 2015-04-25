@@ -31,8 +31,8 @@ func io_write_analog(channel int, value int) {
 
 
 
-func io_read_bit(channel int) bool {
-	return bool(C.io_read_bit(C.int(channel)))
+func io_read_bit(channel int) int {
+	return int(C.io_read_bit(C.int(channel)))
 }
 
 

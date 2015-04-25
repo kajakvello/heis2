@@ -4,34 +4,12 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	//."./../Driver"
+	."./../Driver"
 )
 
 
 //var Send_ch chan Udp_message
 
-<<<<<<< HEAD
-type Order struct {
-
-	//My posistion:
-	MyFloor int
-	MyDirection int
-	//Order:
-	Floor int				
-	Direction int 		// 1 = UP, 0 = DOWN, -1 = INSIDE
-	OrderHandled bool 
-	NewOrder bool
-	UpdateOrder bool
-	//My orders:
-	Up [N_FLOORS]bool
-	Down [N_FLOORS]bool
-	Inside [N_FLOORS]bool
-		
-}
-
-
-=======
->>>>>>> 0beabc0fd3bf2b289636ed18cfb04b7c1b1ec22f
 
 
 
