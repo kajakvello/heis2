@@ -120,6 +120,7 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, do
 			}
 		}
 	}
+	println("cost = ", cost, " from IP ", MyAddress)
 	return cost
 }
 

@@ -12,6 +12,7 @@ type ElevStatus struct{
 	Up [N_FLOORS]bool
 	Down [N_FLOORS]bool
 	Inside [N_FLOORS]bool
+	DoorOpen bool
 	Defekt bool
 }
 
@@ -119,6 +120,7 @@ func selectCostCase(myFloor, orderFloor, myDirection, orderDirection int, up, do
 			}
 		}
 	}
+	println("cost = ", cost, " from IP ", MyAddress)
 	return cost
 }
 

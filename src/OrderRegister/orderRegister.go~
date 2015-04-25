@@ -48,6 +48,24 @@ var GotMessage = make(chan string)
 var Alive = make(chan string)
 
 
+type Order struct {
+
+	//My posistion:
+	MyFloor int
+	MyDirection int
+	Defekt bool
+	//Order:
+	Floor int				
+	Direction int 		// 1 = UP, 0 = DOWN, -1 = INSIDE
+	OrderHandled bool 
+	NewOrder bool
+	DoorOpen bool
+	//My orders:
+	Up [N_FLOORS]bool
+	Down [N_FLOORS]bool
+	Inside [N_FLOORS]bool
+		
+}
 
 
 

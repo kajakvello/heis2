@@ -58,6 +58,7 @@ func Init() {
 			}
 		}
 	}
+	go SelfAliveTimer(MyAddress)
 	println("Init completed")
 }
 
@@ -67,8 +68,10 @@ func Init() {
 func PrintStatus() {
 
 	for{
-		Println("UP: ", GlobalUp)
-		Println("DOWN: ", GlobalDown)	
+		//Println("UP: ", GlobalUp)
+		//Println("DOWN: ", GlobalDown)	
+		
+		Println("Defekt = ", Defekt)
 		
 		Sleep(2*Second)
 		/*
@@ -89,7 +92,14 @@ func RunElevator() {
 	for {
 		if DoorOpen {
 			Sleep(100*Millisecond)
-		} else {
+		/*} else if Defekt {
+			for Elev_get_floor_sensor_signal() != 0 {
+				Elev_set_motor_direction(-300)
+			}
+			Elev_set_motor_direction(50)
+			Sleep(2000*Microsecond)
+			Elev_set_motor_direction(0)
+		}*/ } else {
 			if EmptyQueue() {
 				MyDirection = -1
 			}
@@ -272,7 +282,7 @@ func ReceiveMessage() {
 			} else {
 			
 				GotMessage <- IP
-				//Alive <- IP
+				Alive <- IP
 				def := Elevators[IP].Defekt
 				Elevators[IP] = ElevStatus{LastFloor: receivedOrder.MyFloor, 
 					Direction: receivedOrder.MyDirection, DoorOpen: receivedOrder.DoorOpen, 
@@ -282,8 +292,10 @@ func ReceiveMessage() {
 			}
 			
 					
+		} else {
+			Alive <- IP
 		}
-		
+			
 		Sleep(1*Millisecond)
 	}
 }
@@ -295,8 +307,6 @@ func ReceiveMessage() {
 
 //Receives orders from all elevators
 func receiveOrder(receivedOrder Order) {
-	
-	
 	
 	go SetButtonLight(receivedOrder)
 	
@@ -321,24 +331,7 @@ func receiveOrder(receivedOrder Order) {
 				}
 			}
 		}
-		
-
-		//sjekker om bestillingen finnes fra før
-		if (receivedOrder.Direction == 1 && GlobalUp[receivedOrder.Floor]) || (receivedOrder.Direction == 0 && GlobalDown[receivedOrder.Floor]) {
-			return
-		}
-		/*
-		
-		for _, val := range Elevators {
-			if (val.Up)[receivedOrder.Floor] && receivedOrder.Direction == 1 {
-				return
-			} else if (val.Down)[receivedOrder.Floor] && receivedOrder.Direction == 0 {
-				return
-			}
-		}*/
 	}
-	
-	
 	
 	UpdateGlobalOrders(receivedOrder)
 	if !Defekt && GetCost(LastFloor, MyDirection, receivedOrder.Floor, receivedOrder.Direction, MyAddress) == 1 {
@@ -348,7 +341,7 @@ func receiveOrder(receivedOrder Order) {
 		} else {
 			UpdateMyOrders(receivedOrder)
 		}
-	}
+	} 
 }
 
 
